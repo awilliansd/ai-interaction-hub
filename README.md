@@ -1,6 +1,6 @@
 <p align="center">
   <strong>Texto Centralizado</strong><br>
-  <img src="icons/app.png" alt="Descrição da imagem">
+  <img src="icons/aiinteractionhub-dark.png" alt="Descrição da imagem">
 </p>
 
 # AI Interaction Hub 
