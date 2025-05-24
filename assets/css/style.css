@@ -116,6 +116,18 @@ body {
     color: #00ccff;
 }
 
+.github-link {
+    color: #00ccff;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.github-link:hover {
+    color: #33d9ff;
+    text-decoration: underline;
+}
+
 /* Conteúdo Principal */
 #main-content {
     display: flex;

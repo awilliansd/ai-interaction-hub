@@ -18,6 +18,10 @@ function exitApp() {
   ipcRenderer.send('exit-app');
 }
 
+function openGitHub() {
+  ipcRenderer.send('open-github');
+}
+
 function showAbout() {
   const modal = document.getElementById('about-modal');
   if (modal) {

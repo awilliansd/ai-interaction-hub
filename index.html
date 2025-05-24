@@ -30,9 +30,9 @@
     <div class="modal-content">
       <span class="close" onclick="hideAbout()">&times;</span>
       <h2>AI Interaction Hub</h2>
-      <p><strong>Desenvolvido por:</strong> [Alessandro Willian]</p>
+      <p><strong>Desenvolvido por:</strong> [Seu Nome]</p>
       <p><strong>Ano:</strong> 2025</p>
-      <p><strong>GitHub:</strong> http://github.com/awilliansd</p>
+      <p><strong>GitHub:</strong> <a href="#" onclick="openGitHub()" class="github-link">github.com/awilliansd</a></p>
       <p>Uma interface unificada para interagir com múltiplos assistentes de IA.</p>
     </div>
   </div>
@@ -57,6 +57,9 @@
       <button id="btn-grok" onclick="showTab('grok')">
         <img src="assets/icons/grok.png" alt="Grok" width="32" height="32">
       </button>
+      <button id="btn-metaai" onclick="showTab('metaai')">
+        <img src="assets/icons/metaai.png" alt="Meta AI" width="32" height="32">
+      </button>
     </div>
 
     <div id="webview-container">
@@ -68,6 +71,7 @@
       <webview id="deepseek" src="https://chat.deepseek.com" partition="persist:deepseek"></webview>
       <webview id="gemini" src="https://gemini.google.com" partition="persist:gemini"></webview>
       <webview id="grok" src="https://grok.com" partition="persist:grok"></webview>
+      <webview id="metaai" src="https://www.meta.ai/" partition="persist:metaai"></webview>
     </div>
   </div>
 </body>

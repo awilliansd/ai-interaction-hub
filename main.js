@@ -1,5 +1,5 @@
 // main.js
-const { app, BrowserWindow, Menu, Tray, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, Tray, ipcMain, shell } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -61,6 +61,10 @@ app.whenReady().then(() => {
   ipcMain.on('exit-app', () => {
     isQuiting = true;
     app.quit();
+  });
+
+  ipcMain.on('open-github', () => {
+    shell.openExternal('https://github.com/awilliansd');
   });
 });
 
