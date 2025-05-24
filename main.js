@@ -11,12 +11,13 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: true,
+      contextIsolation: false,
       webviewTag: true  // 👈 necessário para que <webview> funcione
-  },
-    icon: path.join(__dirname, 'icons', 'app.png')
+    },
+    icon: path.join(__dirname, 'icons', 'app.png'),
+    titleBarStyle: 'hidden', // Remove a barra de título padrão para usar nossa barra customizada
+    frame: false // Remove a moldura da janela
   });
 
   mainWindow.loadFile('index.html');
@@ -54,11 +55,21 @@ app.whenReady().then(() => {
     mainWindow.show();
   });
 
+  // IPC handlers
   ipcMain.on('reload-tab', (event, tabId) => {
     mainWindow.webContents.send('reload-tab', tabId);
+  });
+
+  ipcMain.on('exit-app', () => {
+    isQuiting = true;
+    app.quit();
   });
 });
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
