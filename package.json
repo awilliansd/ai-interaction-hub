@@ -1,6 +1,6 @@
 {
-  "name": "ia-hub",
-  "version": "3.0.3",
+  "name": "ai-interaction-hub",
+  "version": "1.0.0",
   "description": "Hub unificado para múltiplos chats de IA",
   "main": "main.js",
   "scripts": {
@@ -12,8 +12,8 @@
     "electron-builder": "^23.6.0"
   },
   "build": {
-    "appId": "com.alessandrowillian.iahub",
-    "productName": "IA Hub",
+    "appId": "com.alessandrowillian.aiinteractionhub",
+    "productName": "AI Interaction Hub",
     "win": {
       "target": "nsis",
       "icon": "icons/app.ico"

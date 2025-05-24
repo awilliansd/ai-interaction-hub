@@ -35,7 +35,7 @@ app.whenReady().then(() => {
   createWindow();
 
   tray = new Tray(path.join(__dirname, 'icons', 'app.png'));
-  tray.setToolTip('IA Hub');
+  tray.setToolTip('AI Interaction Hub');
   tray.setContextMenu(Menu.buildFromTemplate([
     {
       label: 'Mostrar',

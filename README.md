@@ -1,4 +1,4 @@
-# ia-hub-electon
+# AI Interaction Hub
 Projeto que fiz para ser um hub de IA, as que eu mais utilizo em um lugar só. Tomei como base o Ferdium para criar essa aplicação
 
 Para iniciar a aplicação para teste: npm start
