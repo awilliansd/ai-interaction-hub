@@ -4,10 +4,19 @@
   "description": "Hub unificado para múltiplos chats de IA",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder"
   },
   "devDependencies": {
     "electron": "^29.0.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^23.6.0"
+  },
+  "build": {
+    "appId": "com.seunome.iahub",
+    "productName": "IA Hub",
+    "win": {
+      "target": "nsis",
+      "icon": "icons/app.ico"
+    }
   }
 }
