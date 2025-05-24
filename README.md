@@ -18,3 +18,9 @@ Claude
 
 
 ![Claude](assets/images/Screenshot2.png)
+
+
+🔄 Futuras Melhorias
+- Suporte a múltiplas janelas (caso queira cada IA em uma janela separada).
+- Exportar logs de conversas ou sessões com as IAs.
+- Adicionar abas dinâmicas com ícones customizados via drag-and-drop.
