@@ -14,6 +14,8 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
       webviewTag: true  // 👈 necessário para que <webview> funcione
     },
     icon: path.join(__dirname, 'icons', 'app.png')
@@ -79,4 +81,29 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+const fs = require('fs');
+const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+
+function saveSettings(settings) {
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+}
+
+function loadSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(settingsPath));
+  } catch {
+    return { minimizeToTray: false };
+  }
+}
+
+ipcMain.on('set-minimize-to-tray', (event, value) => {
+  const currentSettings = loadSettings();
+  currentSettings.minimizeToTray = value;
+  saveSettings(currentSettings);
+});
+
+ipcMain.on("app:close", () => {
+  app.quit();
 });
