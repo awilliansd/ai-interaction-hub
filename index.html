@@ -4,59 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>AI Interaction Hub</title>
-  <style>
-    body {
-      margin: 0;
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    #sidebar {
-      width: 60px;
-      background: #202020;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding-top: 10px;
-    }
-
-    #sidebar button {
-      margin: 10px 0;
-      background: none;
-      border: none;
-      color: white;
-      font-size: 18px;
-      cursor: pointer;
-      width: 100%;
-      height: 40px;
-    }
-
-    #webview-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    webview {
-      flex: 1;
-      /* ocupa todo espaço vertical disponível */
-      width: 100% !important;
-      border: none;
-      display: none;
-    }
-
-    webview.active {
-      display: flex;
-      /* flex para respeitar o flex-grow */
-    }
-
-    #sidebar button.active-button {
-      background-color: #404040;
-      border-left: 4px solid #00ccff;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
+  <script src="renderer.js"></script>
 </head>
 
 <body>
@@ -91,19 +40,6 @@
     <webview id="gemini" src="https://gemini.google.com" partition="persist:gemini"></webview>
     <webview id="grok" src="https://grok.com" partition="persist:grok"></webview>
   </div>
-
-  <script>
-    function showTab(id) {
-      // Webviews
-      document.querySelectorAll('webview').forEach(w => w.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-
-      // Sidebar buttons
-      document.querySelectorAll('#sidebar button').forEach(b => b.classList.remove('active-button'));
-      const btn = document.getElementById(`btn-${id}`);
-      if (btn) btn.classList.add('active-button');
-    }
-  </script>
 </body>
 
 </html>

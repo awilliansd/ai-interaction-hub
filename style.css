@@ -44,3 +44,8 @@ webview.active {
     display: flex;
     /* flex para respeitar o flex-grow */
 }
+
+#sidebar button.active-button {
+    background-color: #404040;
+    border-left: 4px solid #00ccff;
+}
