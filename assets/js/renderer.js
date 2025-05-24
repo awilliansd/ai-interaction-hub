@@ -1,5 +1,8 @@
 const { ipcRenderer } = window.require('electron');
 
+// Estado das configurações
+let minimizeToTray = false;
+
 // Funções do menu
 function toggleMenu(menuId) {
   // Fecha todos os menus primeiro
@@ -35,6 +38,46 @@ function hideAbout() {
   if (modal) {
     modal.style.display = 'none';
   }
+}
+
+// Funções de configurações
+function showSettings() {
+  const modal = document.getElementById('settings-modal');
+  if (modal) {
+    modal.style.display = 'block';
+    // Carrega estado atual da configuração
+    document.getElementById('minimize-to-tray').checked = minimizeToTray;
+  }
+}
+
+function hideSettings() {
+  const modal = document.getElementById('settings-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function toggleMinimizeToTray() {
+  minimizeToTray = document.getElementById('minimize-to-tray').checked;
+  ipcRenderer.send('set-minimize-to-tray', minimizeToTray);
+}
+
+// Funções de contexto das abas
+function showTabContextMenu(event, tabId) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  document.body.setAttribute('data-current-tab', tabId);
+  
+  const menu = document.getElementById('tab-context-menu');
+  menu.style.left = `${event.pageX}px`;
+  menu.style.top = `${event.pageY}px`;
+  menu.style.display = 'block';
+}
+
+function hideTabContextMenu() {
+  const menu = document.getElementById('tab-context-menu');
+  if (menu) menu.style.display = 'none';
 }
 
 function hideAllMenus() {
@@ -78,9 +121,11 @@ function showContextMenu(event, tabId) {
 
 function reloadCurrentTab() {
   const currentTabId = document.body.getAttribute('data-current-tab');
-  const webview = document.getElementById(currentTabId);
-  if (webview) webview.reload();
-  hideContextMenu();
+  if (currentTabId) {
+    const webview = document.getElementById(currentTabId);
+    if (webview) webview.reload();
+  }
+  hideTabContextMenu();
 }
 
 function hideContextMenu() {
@@ -94,22 +139,32 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.menu-item')) {
     hideAllMenus();
   }
-  // Fecha context menu
-  hideContextMenu();
-  // Fecha modal se clicar fora dele
+  // Fecha context menu das abas
+  if (!e.target.closest('#tab-context-menu')) {
+    hideTabContextMenu();
+  }
+  // Fecha modais se clicar fora deles
   if (e.target.classList.contains('modal')) {
     hideAbout();
+    hideSettings();
   }
 });
 
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key.toLowerCase() === 'r') {
-    reloadCurrentTab();
+    e.preventDefault(); // Previne reload da página principal
+    const currentTabId = document.body.getAttribute('data-current-tab');
+    if (currentTabId) {
+      const webview = document.getElementById(currentTabId);
+      if (webview) webview.reload();
+    }
   }
-  // Fecha modal com ESC
+  // Fecha modais com ESC
   if (e.key === 'Escape') {
     hideAbout();
+    hideSettings();
     hideAllMenus();
+    hideTabContextMenu();
   }
 });
 

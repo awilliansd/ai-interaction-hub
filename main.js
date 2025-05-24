@@ -5,6 +5,7 @@ const path = require('path');
 let mainWindow;
 let tray = null;
 let isQuiting = false;
+let minimizeToTray = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -22,7 +23,7 @@ function createWindow() {
   Menu.setApplicationMenu(null); // Remove menu padrão
 
   mainWindow.on('close', (event) => {
-    if (!isQuiting) {
+    if (!isQuiting && minimizeToTray) {
       event.preventDefault();
       mainWindow.hide();
     }
@@ -65,6 +66,10 @@ app.whenReady().then(() => {
 
   ipcMain.on('open-github', () => {
     shell.openExternal('https://github.com/awilliansd');
+  });
+
+  ipcMain.on('set-minimize-to-tray', (event, value) => {
+    minimizeToTray = value;
   });
 });
 
