@@ -1,5 +1,4 @@
 <p align="center">
-  <strong>Texto Centralizado</strong><br>
   <img src="icons/aiinteractionhub-dark.png" alt="Descrição da imagem">
 </p>
 
@@ -12,8 +11,10 @@ Para iniciar a aplicação para teste: npm start
 
 Para gerar um executável com o instalador: npm install --save-dev electron-builder e depois utilize o npm run dist para gerar a distribuição
 
-
+Chat GPT
 ![Chat GPT](assets/images/Screenshot1.png)
+
+Claude
 
 
 ![Claude](assets/images/Screenshot2.png)
