@@ -14,7 +14,7 @@
     <div class="menu-item">
       <span onclick="toggleMenu('arquivo')">Arquivo</span>
       <div id="arquivo-menu" class="dropdown-menu">
-        <div class="menu-option" onclick="exitApp()">Sair</div>
+        <div class="menu-option" onclick="window.electronAPI.closeApp()">Sair</div>
       </div>
     </div>
     <div class="menu-item">
@@ -42,8 +42,7 @@
       </div>
 
       <div class="setting-item">
-        <h3>Atalhos de Teclado</h3>
-        <p class="shortcut-info"><strong>Ctrl + R:</strong> Recarregar aba atual</p>
+        <h3>Comandos de ajuda</h3>
         <p class="shortcut-info"><strong>Botão direito:</strong> Menu de contexto nas abas</p>
       </div>
     </div>
