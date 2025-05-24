@@ -15,9 +15,7 @@ function createWindow() {
       contextIsolation: false,
       webviewTag: true  // 👈 necessário para que <webview> funcione
     },
-    icon: path.join(__dirname, 'icons', 'app.png'),
-    titleBarStyle: 'hidden', // Remove a barra de título padrão para usar nossa barra customizada
-    frame: false // Remove a moldura da janela
+    icon: path.join(__dirname, 'icons', 'app.png')
   });
 
   mainWindow.loadFile('index.html');

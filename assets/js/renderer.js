@@ -1,5 +1,45 @@
 const { ipcRenderer } = window.require('electron');
 
+// Funções do menu
+function toggleMenu(menuId) {
+  // Fecha todos os menus primeiro
+  document.querySelectorAll('.dropdown-menu').forEach(menu => {
+    menu.classList.remove('show');
+  });
+  
+  // Abre o menu selecionado
+  const menu = document.getElementById(menuId + '-menu');
+  if (menu) {
+    menu.classList.add('show');
+  }
+}
+
+function exitApp() {
+  ipcRenderer.send('exit-app');
+}
+
+function showAbout() {
+  const modal = document.getElementById('about-modal');
+  if (modal) {
+    modal.style.display = 'block';
+  }
+  hideAllMenus();
+}
+
+function hideAbout() {
+  const modal = document.getElementById('about-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function hideAllMenus() {
+  document.querySelectorAll('.dropdown-menu').forEach(menu => {
+    menu.classList.remove('show');
+  });
+}
+
+// Funções originais
 function toggleSettings() {
   const panel = document.getElementById('settings-panel');
   panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
@@ -45,11 +85,27 @@ function hideContextMenu() {
 }
 
 // Eventos
-document.addEventListener('click', hideContextMenu);
+document.addEventListener('click', (e) => {
+  // Fecha menus se clicar fora deles
+  if (!e.target.closest('.menu-item')) {
+    hideAllMenus();
+  }
+  // Fecha context menu
+  hideContextMenu();
+  // Fecha modal se clicar fora dele
+  if (e.target.classList.contains('modal')) {
+    hideAbout();
+  }
+});
 
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key.toLowerCase() === 'r') {
     reloadCurrentTab();
+  }
+  // Fecha modal com ESC
+  if (e.key === 'Escape') {
+    hideAbout();
+    hideAllMenus();
   }
 });
 
@@ -57,4 +113,10 @@ document.addEventListener('keydown', (e) => {
 ipcRenderer.on('reload-tab', (event, tabId) => {
   const webview = document.getElementById(tabId);
   if (webview) webview.reload();
+});
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+  // Define ChatGPT como aba ativa por padrão
+  showTab('chatgpt');
 });

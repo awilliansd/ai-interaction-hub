@@ -15,13 +15,11 @@ body {
     display: flex;
     align-items: center;
     padding: 0 10px;
-    -webkit-app-region: drag; /* Permite arrastar a janela */
 }
 
 .menu-item {
     position: relative;
     margin-right: 20px;
-    -webkit-app-region: no-drag; /* Evita arrastar nos itens do menu */
 }
 
 .menu-item span {
