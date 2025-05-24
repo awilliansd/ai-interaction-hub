@@ -1,0 +1,13 @@
+{
+  "name": "ia-hub",
+  "version": "1.0.0",
+  "description": "Hub unificado para múltiplos chats de IA",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^26.0.12"
+  }
+}
