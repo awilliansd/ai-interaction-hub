@@ -1,6 +1,6 @@
 {
   "name": "ia-hub",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "Hub unificado para múltiplos chats de IA",
   "main": "main.js",
   "scripts": {
@@ -12,7 +12,7 @@
     "electron-builder": "^23.6.0"
   },
   "build": {
-    "appId": "com.seunome.iahub",
+    "appId": "com.alessandrowillian.iahub",
     "productName": "IA Hub",
     "win": {
       "target": "nsis",

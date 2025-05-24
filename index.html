@@ -56,12 +56,24 @@
 
 <body>
   <div id="sidebar">
-    <button onclick="showTab('chatgpt')">🧠</button>
-    <button onclick="showTab('claude')">🤖</button>
-    <button onclick="showTab('copilot')">🧩</button>
-    <button onclick="showTab('deepseek')">🔍</button>
-    <button onclick="showTab('gemini')">🌟</button>
-    <button onclick="showTab('grok')">🐦</button>
+    <button onclick="showTab('chatgpt')">
+      <img src="assets/icons/chatgpt.png" alt="ChatGPT" width="32" height="32">
+    </button>
+    <button onclick="showTab('claude')">
+      <img src="assets/icons/claude.png" alt="Claude" width="32" height="32">
+    </button>
+    <button onclick="showTab('copilot')">
+      <img src="assets/icons/mscopilot.png" alt="MS-Copilot" width="32" height="32">
+    </button>
+    <button onclick="showTab('deepseek')">
+      <img src="assets/icons/deepseek.png" alt="DeepSeek" width="32" height="32">
+    </button>
+    <button onclick="showTab('gemini')">
+      <img src="assets/icons/gemini.png" alt="Gemini" width="32" height="32">
+    </button>
+    <button onclick="showTab('grok')">
+      <img src="assets/icons/grok.png" alt="Grok" width="32" height="32">
+    </button>
   </div>
   <div id="webview-container">
     <webview id="chatgpt" src="https://chat.openai.com" class="active" partition="persist:chatgpt"></webview>
@@ -69,7 +81,7 @@
     <webview id="copilot" src="https://copilot.microsoft.com" partition="persist:copilot"></webview>
     <webview id="deepseek" src="https://deepseek.com/chat" partition="persist:deepseek"></webview>
     <webview id="gemini" src="https://gemini.google.com" partition="persist:gemini"></webview>
-    <webview id="grok" src="https://twitter.com/i/grok" partition="persist:grok"></webview>
+    <webview id="grok" src="https://grok.com" partition="persist:grok"></webview>
   </div>
 
   <script>
