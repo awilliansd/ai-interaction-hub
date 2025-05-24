@@ -51,43 +51,57 @@
       display: flex;
       /* flex para respeitar o flex-grow */
     }
+
+    #sidebar button.active-button {
+      background-color: #404040;
+      border-left: 4px solid #00ccff;
+    }
   </style>
 </head>
 
 <body>
   <div id="sidebar">
-    <button onclick="showTab('chatgpt')">
+    <button id="btn-chatgpt" onclick="showTab('chatgpt')">
       <img src="assets/icons/chatgpt.png" alt="ChatGPT" width="32" height="32">
     </button>
-    <button onclick="showTab('claude')">
+    <button id="btn-claude" onclick="showTab('claude')">
       <img src="assets/icons/claude.png" alt="Claude" width="32" height="32">
     </button>
-    <button onclick="showTab('copilot')">
+    <button id="btn-copilot" onclick="showTab('copilot')">
       <img src="assets/icons/mscopilot.png" alt="MS Copilot" width="32" height="32">
     </button>
-    <button onclick="showTab('deepseek')">
+    <button id="btn-deepseek" onclick="showTab('deepseek')">
       <img src="assets/icons/deepseek.png" alt="DeepSeek" width="32" height="32">
     </button>
-    <button onclick="showTab('gemini')">
+    <button id="btn-gemini" onclick="showTab('gemini')">
       <img src="assets/icons/gemini.png" alt="Gemini" width="32" height="32">
     </button>
-    <button onclick="showTab('grok')">
+    <button id="btn-grok" onclick="showTab('grok')">
       <img src="assets/icons/grok.png" alt="Grok" width="32" height="32">
     </button>
   </div>
+
   <div id="webview-container">
     <webview id="chatgpt" src="https://chat.openai.com" class="active" partition="persist:chatgpt"></webview>
     <webview id="claude" src="https://claude.ai" partition="persist:claude"></webview>
-    <webview id="copilot" src="https://copilot.microsoft.com" partition="persist:copilot"></webview>
-    <webview id="deepseek" src="https://deepseek.com/chat" partition="persist:deepseek"></webview>
+    <webview id="copilot" src="https://copilot.microsoft.com" partition="persist:copilot"
+      useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36">
+    </webview>
+    <webview id="deepseek" src="https://chat.deepseek.com" partition="persist:deepseek"></webview>
     <webview id="gemini" src="https://gemini.google.com" partition="persist:gemini"></webview>
     <webview id="grok" src="https://grok.com" partition="persist:grok"></webview>
   </div>
 
   <script>
     function showTab(id) {
+      // Webviews
       document.querySelectorAll('webview').forEach(w => w.classList.remove('active'));
       document.getElementById(id).classList.add('active');
+
+      // Sidebar buttons
+      document.querySelectorAll('#sidebar button').forEach(b => b.classList.remove('active-button'));
+      const btn = document.getElementById(`btn-${id}`);
+      if (btn) btn.classList.add('active-button');
     }
   </script>
 </body>
