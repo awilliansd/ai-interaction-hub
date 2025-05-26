@@ -1,28 +1,8 @@
+# AI Interaction Hub
+
 <p align="center">
   <img src="icons/aiinteractionhub-dark.png" alt="Descrição da imagem">
 </p>
-
-# AI Interaction Hub 
-Projeto que fiz para ser um hub de IA, as que eu mais utilizo em um lugar só. Tomei como base o Ferdium para criar essa aplicação
-
-É necessário para começar emular a aplicação na máquina local, deve executar esse comando para instalar o electron e suas dependências: npm install electron --save-dev
-
-Para iniciar a aplicação para teste: npm start
-
-Para gerar um executável com o instalador: npm install --save-dev electron-builder e depois utilize o npm run dist para gerar a distribuição
-
-Chat GPT
-![Chat GPT](assets/images/Screenshot1.png)
-
-Claude
-
-
-![Claude](assets/images/Screenshot2.png)
-
-
-# AI Interaction Hub
-
-![AI Interaction Hub Logo](icons/aiinteractionhub-dark.png)
 
 **AI Interaction Hub** é um aplicativo desktop que reúne, em uma única interface, os principais assistentes de IA do mercado, facilitando o acesso e a organização das suas conversas.
 
@@ -59,11 +39,13 @@ Claude
 
 3. **Execute o aplicativo em modo de desenvolvimento:**
    ```sh
+   npm install electron --save-dev
    npm start
    ```
 
 4. **Para gerar o instalador (Windows):**
    ```sh
+   npm install --save-dev electron-builder
    npm run dist
    ```
    O instalador será gerado na pasta `dist/`.
@@ -98,6 +80,15 @@ Claude
 - **Ctrl + R:** Recarrega a aba ativa
 - **ESC:** Fecha modais e menus abertos
 - **Botão direito:** Abre menu de contexto nas abas
+
+Chat GPT
+![Chat GPT](assets/images/Screenshot1.png)
+
+Claude
+
+
+![Claude](assets/images/Screenshot2.png)
+
 
 ## Contribuição
 
