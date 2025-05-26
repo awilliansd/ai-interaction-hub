@@ -1,28 +1,35 @@
 import requests
 
-# Configurações
+# Informações do repositório e release
 owner = "awilliansd"
-repo = "ai-interaction-hub"  # Apenas o nome do repositório
-tag = "v1.0.1"  # Tag da release
-url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
+repo = "ai-interaction-hub"
+tag = "v1.0.1"
+asset_name = "AI.Interaction.Hub.Setup.1.0.1.exe"
 
-# Cabeçalho para aceitar a versão correta da API
+# Opcional: coloque seu token GitHub para evitar limite de rate
+# token = "ghp_xxx..."  # substitua pelo seu token se quiser
 headers = {
-    "Accept": "application/vnd.github+json",
-    # "Authorization": "Bearer SEU_TOKEN_AQUI"  # Descomente se for um repositório privado
+    # "Authorization": f"token {token}"  # descomente se for usar token
+    "Accept": "application/vnd.github+json"
 }
 
-# Faz a requisição à API
-response = requests.get(url, headers=headers)
+# URL da API para buscar release pelo tag
+url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}"
 
-# Verifica se a requisição foi bem-sucedida
-if response.status_code == 200:
-    data = response.json()
-    if "assets" in data and data["assets"]:
-        for asset in data["assets"]:
-            print(f"Arquivo: {asset['name']}, Downloads: {asset['download_count']}")
-    else:
-        print("Nenhum ativo encontrado na release.")
+response = requests.get(url, headers=headers)
+if response.status_code != 200:
+    print(f"Erro ao buscar release: {response.status_code}")
+    print(response.json())
+    exit()
+
+release_data = response.json()
+assets = release_data.get("assets", [])
+
+# Busca o asset pelo nome
+for asset in assets:
+    if asset["name"] == asset_name:
+        print(f"Asset: {asset_name}")
+        print(f"Downloads: {asset['download_count']}")
+        break
 else:
-    print(f"Erro na requisição: {response.status_code}")
-    print(response.json().get("message", "Detalhes do erro não disponíveis"))
+    print(f"Asset '{asset_name}' não encontrado na release '{tag}'.")
