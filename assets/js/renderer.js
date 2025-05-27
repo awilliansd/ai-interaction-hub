@@ -1,7 +1,7 @@
 // Estado das configurações
 let minimizeToTray = false;
 const savedMinimizeToTray = localStorage.getItem('minimizeToTray');
-minimizeToTray = savedMinimizeToTray === 'true';
+minimizeToTray = savedMinimizeToTray === 'false';
 
 // Funções do menu
 function toggleMenu(menuId) {
@@ -18,7 +18,7 @@ function toggleMenu(menuId) {
 }
 
 function exitApp() {
-  window.electronAPI.send('exit-app');
+  window.electronAPI.app.exit();
 }
 
 function openGitHub() {
@@ -58,10 +58,8 @@ function hideSettings() {
 
 function toggleMinimizeToTray() {
   const checkbox = document.getElementById('minimize-to-tray');
-
   minimizeToTray = checkbox.checked;
-  localStorage.setItem('minimizeToTray', minimizeToTray ? 'true' : 'false');
-  window.electronAPI.send('set-minimize-to-tray', minimizeToTray);
+  window.electronAPI.settings.setMinimizeToTray(minimizeToTray);
 }
 
 // Funções de contexto das abas
@@ -200,10 +198,6 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
   const menu = document.querySelector('.menu'); // ou '#menu', dependendo do seu HTML
 
-  // Recupera o valor salvo e garante que minimizeToTray seja booleano
-  const savedMinimizeToTray = localStorage.getItem('minimizeToTray');
-  minimizeToTray = savedMinimizeToTray === 'true';
-
   // Atualiza o checkbox conforme o valor salvo
   const minimizeCheckbox = document.getElementById('minimize-to-tray');
   if (minimizeCheckbox) {
@@ -223,8 +217,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (closeBtn2) closeBtn2.addEventListener("click", () => window.electronAPI.closeApp());
 });
 
-// Receber configurações iniciais vindas do main process
-window.electronAPI.onInitSettings((settings) => {
-  console.log("Configurações recebidas:", settings);
-  // Atualizar UI ou lógica com base nas configurações
+window.electronAPI.settings.onInit((settings) => {
+  minimizeToTray = settings.minimizeToTray ?? false;
+  const checkbox = document.getElementById('minimize-to-tray');
+  if (checkbox) {
+    checkbox.checked = minimizeToTray;
+  }
 });
