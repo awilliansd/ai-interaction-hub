@@ -5,7 +5,7 @@ const path = require('path');
 let mainWindow;
 let tray = null;
 let isQuiting = false;
-let minimizeToTray = false;
+let minimizeToTray = loadSettings().minimizeToTray ?? false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -14,21 +14,26 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'assets/js/preload.js'),
       webviewTag: true
     },
     icon: path.join(__dirname, 'icons', 'app.png')
   });
 
   mainWindow.loadFile('index.html');
-  Menu.setApplicationMenu(null); // Remove menu padrão
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    const settings = loadSettings();
+    mainWindow.webContents.send('init-settings', settings);
+  });
+
+  Menu.setApplicationMenu(null);
 
   mainWindow.on('close', (event) => {
     if (!isQuiting && minimizeToTray) {
       event.preventDefault();
       mainWindow.hide();
     }
-    return false;
   });
 }
 
@@ -53,6 +58,8 @@ app.whenReady().then(() => {
 
   tray.on('click', () => {
     mainWindow.show();
+    const settings = loadSettings();
+    mainWindow.webContents.send('init-settings', settings);
   });
 
   // IPC handlers
@@ -71,6 +78,9 @@ app.whenReady().then(() => {
 
   ipcMain.on('set-minimize-to-tray', (event, value) => {
     minimizeToTray = value;
+    const currentSettings = loadSettings();
+    currentSettings.minimizeToTray = value;
+    saveSettings(currentSettings);
   });
 });
 
@@ -97,12 +107,10 @@ function loadSettings() {
   }
 }
 
-ipcMain.on('set-minimize-to-tray', (event, value) => {
-  const currentSettings = loadSettings();
-  currentSettings.minimizeToTray = value;
-  saveSettings(currentSettings);
-});
-
 ipcMain.on("app:close", () => {
   app.quit();
+});
+
+ipcMain.handle('get-app-version', () => {
+  return require('./package.json').version;
 });

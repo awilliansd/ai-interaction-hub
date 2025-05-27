@@ -1,9 +1,7 @@
-const { ipcRenderer } = window.require('electron');
-
 // Estado das configurações
 let minimizeToTray = false;
 const savedMinimizeToTray = localStorage.getItem('minimizeToTray');
-minimizeToTray = savedMinimizeToTray === 'true';
+minimizeToTray = savedMinimizeToTray === 'false';
 
 // Funções do menu
 function toggleMenu(menuId) {
@@ -20,11 +18,11 @@ function toggleMenu(menuId) {
 }
 
 function exitApp() {
-  ipcRenderer.send('exit-app');
+  window.electronAPI.app.exit();
 }
 
 function openGitHub() {
-  ipcRenderer.send('open-github');
+  window.electronAPI.send('open-github');
 }
 
 function showAbout() {
@@ -47,7 +45,6 @@ function showSettings() {
   const modal = document.getElementById('settings-modal');
   if (modal) {
     modal.style.display = 'block';
-    // Carrega estado atual da configuração
     document.getElementById('minimize-to-tray').checked = minimizeToTray;
   }
 }
@@ -60,8 +57,9 @@ function hideSettings() {
 }
 
 function toggleMinimizeToTray() {
-  minimizeToTray = document.getElementById('minimize-to-tray').checked;
-  ipcRenderer.send('set-minimize-to-tray', minimizeToTray);
+  const checkbox = document.getElementById('minimize-to-tray');
+  minimizeToTray = checkbox.checked;
+  window.electronAPI.settings.setMinimizeToTray(minimizeToTray);
 }
 
 // Funções de contexto das abas
@@ -136,11 +134,14 @@ function hideContextMenu() {
 }
 
 function closeCurrentTab() {
-  const currentTabId = document.body.getAttribute('data-current-tab');
-  if (currentTabId) {
-    const webview = document.getElementById(currentTabId);
-    if (webview) webview.remove();
-  }
+  const tabId = document.body.getAttribute('data-current-tab');
+  if (!tabId) return;
+
+  const webview = document.getElementById(tabId);
+  const button = document.getElementById(`btn-${tabId}`);
+  if (webview) webview.remove();
+  if (button) button.remove();
+
   hideTabContextMenu();
 }
 
@@ -193,41 +194,39 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Comunicação do main process
-ipcRenderer.on('reload-tab', (event, tabId) => {
-  const webview = document.getElementById(tabId);
-  if (webview) webview.reload();
-});
-
 // Inicialização
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const menu = document.querySelector('.menu'); // ou '#menu', dependendo do seu HTML
-  const savedMinimizeToTray = localStorage.getItem('minimizeToTray');
+  const versionSpan = document.getElementById('app-version');
 
-  if (savedMinimizeToTray !== null) {
-    minimizeToTray = JSON.parse(savedMinimizeToTray);
+  if (versionSpan && window.electronAPI?.app?.getVersion) {
+    const version = await window.electronAPI.app.getVersion();
+    versionSpan.innerText = version;
   }
 
-  document.getElementById('minimize-to-tray').checked = minimizeToTray;
+  // Atualiza o checkbox conforme o valor salvo
+  const minimizeCheckbox = document.getElementById('minimize-to-tray');
+  if (minimizeCheckbox) {
+    minimizeCheckbox.checked = minimizeToTray;
+  }
 
-  // 🟡 Aqui é o local certo para configurar o atributo de acessibilidade:
+  // Acessibilidade (opcional)
   if (menu) {
     menu.setAttribute('role', 'tablist');
   }
 
   showTab('chatgpt');
+
+  const closeBtn1 = document.getElementById("close-btn");
+  const closeBtn2 = document.getElementById("closeBtn");
+  if (closeBtn1) closeBtn1.addEventListener("click", () => window.electronAPI.closeApp());
+  if (closeBtn2) closeBtn2.addEventListener("click", () => window.electronAPI.closeApp());
 });
 
-mainWindow.webContents.on('did-finish-load', () => {
-  const settings = loadSettings();
-  mainWindow.webContents.send('init-settings', settings);
-});
-
-ipcRenderer.on('init-settings', (event, settings) => {
-  minimizeToTray = settings.minimizeToTray;
-  document.getElementById('minimize-to-tray').checked = minimizeToTray;
-});
-
-document.getElementById("close-btn").addEventListener("click", () => {
-  window.electronAPI.closeApp(); // só funciona se exposto no preload
+window.electronAPI.settings.onInit((settings) => {
+  minimizeToTray = settings.minimizeToTray ?? false;
+  const checkbox = document.getElementById('minimize-to-tray');
+  if (checkbox) {
+    checkbox.checked = minimizeToTray;
+  }
 });
