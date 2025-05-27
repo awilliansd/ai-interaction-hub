@@ -1,22 +1,36 @@
 // modules/ipcHandlers.js
 const { ipcMain, shell } = require("electron");
+const path = require("path"); // path pode ser necessário para outras coisas, manter por enquanto
 
+// Recebe mainWindow, app, e settingsManager como dependências
 function initializeIpcHandlers(mainWindow, app, settingsManager) {
-  if (!mainWindow) {
-    console.error("IPC Handlers: mainWindow não está definida.");
+  if (!app) {
+    console.error("IPC Handlers: Instância do 'app' não fornecida.");
     return;
+  }
+  if (!mainWindow) {
+    // Alguns handlers podem não precisar da mainWindow imediatamente,
+    // mas é bom avisar se ela não estiver disponível.
+    console.warn("IPC Handlers: mainWindow não está definida na inicialização.");
+  }
+  if (!settingsManager) {
+      console.error("IPC Handlers: settingsManager não fornecido.");
+      return;
   }
 
   // Recarregar uma aba específica (lógica do lado do renderer)
   ipcMain.on("reload-tab", (event, tabId) => {
-    if (mainWindow) {
-      mainWindow.webContents.send("reload-tab", tabId);
+    const win = require("./windowManager").getMainWindow();
+    if (win) {
+      win.webContents.send("reload-tab", tabId);
+    } else {
+        console.warn("IPC reload-tab: Janela principal não encontrada.");
     }
   });
 
   // Sair da aplicação
   ipcMain.on("exit-app", () => {
-    const appLifecycle = require("./appLifecycle"); // Importa dinamicamente ou passa como dependência
+    const appLifecycle = require("./appLifecycle");
     appLifecycle.setIsQuiting(true);
     app.quit();
   });
@@ -31,8 +45,7 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     const currentSettings = settingsManager.loadSettings();
     currentSettings.minimizeToTray = value;
     settingsManager.saveSettings(currentSettings);
-    // Talvez notificar o appLifecycle ou windowManager sobre a mudança?
-    // Depende de como a lógica de fechar/minimizar é gerenciada.
+    // Notificar outros módulos se necessário (ex: appLifecycle para lógica de fechar)
   });
 
   // Fechar a aplicação (alternativa a 'exit-app')
@@ -42,26 +55,35 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     app.quit();
   });
 
-  // Obter a versão da aplicação
+  // --- Correção do Handler get-app-version ---
+  // Remove o handler antigo se existir para evitar duplicação
+  ipcMain.removeHandler("get-app-version");
+  // Registra o novo handler usando app.getVersion()
   ipcMain.handle("get-app-version", () => {
     try {
-      // Ajuste o caminho para package.json se necessário
-      const packageJsonPath = path.join(app.getAppPath(), "package.json");
-      return require(packageJsonPath).version;
+      // A forma padrão e mais segura no Electron
+      const version = app.getVersion();
+      console.log(`IPC get-app-version: Retornando versão ${version}`);
+      return version;
     } catch (error) {
-      console.error("Erro ao ler package.json:", error);
-      return "N/A";
+      console.error("Erro ao obter versão da aplicação via app.getVersion():", error);
+      return "N/A"; // Retorna um valor padrão em caso de erro
     }
   });
+  // --- Fim da Correção ---
 
-  // Handler para carregar configurações (pode ser útil para o renderer)
+  // Handler para carregar configurações
+  ipcMain.removeHandler("get-settings");
   ipcMain.handle("get-settings", () => {
       return settingsManager.loadSettings();
   });
 
-  // Handler para salvar configurações (pode ser útil para o renderer)
+  // Handler para salvar configurações
+  ipcMain.removeHandler("save-settings");
   ipcMain.handle("save-settings", (event, settings) => {
       settingsManager.saveSettings(settings);
+      // Pode retornar sucesso ou falha
+      return true;
   });
 
   console.log("Manipuladores IPC inicializados.");
