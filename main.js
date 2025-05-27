@@ -1,116 +1,38 @@
-// main.js
-const { app, BrowserWindow, Menu, Tray, ipcMain, shell } = require('electron');
-const path = require('path');
+// main.js (Refatorado)
+const { app } = require("electron");
+const path = require("path");
 
-let mainWindow;
-let tray = null;
-let isQuiting = false;
-let minimizeToTray = loadSettings().minimizeToTray ?? false;
+// Importa os módulos
+const windowManager = require("./modules/windowManager");
+const trayManager = require("./modules/trayManager");
+const ipcHandlers = require("./modules/ipcHandlers");
+const settingsManager = require("./modules/settingsManager");
+const appLifecycle = require("./modules/appLifecycle");
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'assets/js/preload.js'),
-      webviewTag: true
-    },
-    icon: path.join(__dirname, 'icons', 'app.png')
-  });
+// Inicializa o gerenciador de configurações
+settingsManager.initialize(app);
+const initialSettings = settingsManager.loadSettings();
 
-  mainWindow.loadFile('index.html');
-
-  mainWindow.webContents.on('did-finish-load', () => {
-    const settings = loadSettings();
-    mainWindow.webContents.send('init-settings', settings);
-  });
-
-  Menu.setApplicationMenu(null);
-
-  mainWindow.on('close', (event) => {
-    if (!isQuiting && minimizeToTray) {
-      event.preventDefault();
-      mainWindow.hide();
-    }
-  });
-}
+// Inicializa o ciclo de vida da aplicação
+appLifecycle.initializeAppLifecycle(app, windowManager.createWindow, settingsManager);
 
 app.whenReady().then(() => {
-  createWindow();
+  // Cria a janela principal, passando as configurações iniciais
+  const mainWindow = windowManager.createWindow(initialSettings);
 
-  tray = new Tray(path.join(__dirname, 'icons', 'app.png'));
-  tray.setToolTip('AI Interaction Hub');
-  tray.setContextMenu(Menu.buildFromTemplate([
-    {
-      label: 'Mostrar',
-      click: () => mainWindow.show()
-    },
-    {
-      label: 'Sair',
-      click: () => {
-        isQuiting = true;
-        app.quit();
-      }
-    }
-  ]));
+  // Cria o ícone da bandeja, passando a janela principal
+  trayManager.createTray(mainWindow);
 
-  tray.on('click', () => {
-    mainWindow.show();
-    const settings = loadSettings();
-    mainWindow.webContents.send('init-settings', settings);
-  });
+  // Inicializa os manipuladores IPC, passando dependências necessárias
+  ipcHandlers.initializeIpcHandlers(mainWindow, app, settingsManager);
 
-  // IPC handlers
-  ipcMain.on('reload-tab', (event, tabId) => {
-    mainWindow.webContents.send('reload-tab', tabId);
-  });
-
-  ipcMain.on('exit-app', () => {
-    isQuiting = true;
-    app.quit();
-  });
-
-  ipcMain.on('open-github', () => {
-    shell.openExternal('https://github.com/awilliansd');
-  });
-
-  ipcMain.on('set-minimize-to-tray', (event, value) => {
-    minimizeToTray = value;
-    const currentSettings = loadSettings();
-    currentSettings.minimizeToTray = value;
-    saveSettings(currentSettings);
-  });
+  console.log("Aplicação iniciada e módulos carregados.");
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
-});
-
-const fs = require('fs');
-const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-
-function saveSettings(settings) {
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-}
-
-function loadSettings() {
-  try {
-    return JSON.parse(fs.readFileSync(settingsPath));
-  } catch {
-    return { minimizeToTray: false };
+// Tratamento para evento 'activate' (macOS)
+app.on("activate", () => {
+  // Recria a janela se não houver nenhuma aberta
+  if (windowManager.getMainWindow() === null) {
+    windowManager.createWindow(settingsManager.loadSettings());
   }
-}
-
-ipcMain.on("app:close", () => {
-  app.quit();
-});
-
-ipcMain.handle('get-app-version', () => {
-  return require('./package.json').version;
 });
