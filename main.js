@@ -110,3 +110,7 @@ function loadSettings() {
 ipcMain.on("app:close", () => {
   app.quit();
 });
+
+ipcMain.handle('get-app-version', () => {
+  return require('./package.json').version;
+});

@@ -195,8 +195,14 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const menu = document.querySelector('.menu'); // ou '#menu', dependendo do seu HTML
+  const versionSpan = document.getElementById('app-version');
+
+  if (versionSpan && window.electronAPI?.app?.getVersion) {
+    const version = await window.electronAPI.app.getVersion();
+    versionSpan.innerText = version;
+  }
 
   // Atualiza o checkbox conforme o valor salvo
   const minimizeCheckbox = document.getElementById('minimize-to-tray');

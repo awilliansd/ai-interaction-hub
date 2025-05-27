@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     close: () => ipcRenderer.send("app:close"),
     exit: () => ipcRenderer.send("exit-app"),
     onEvent: (callback) => ipcRenderer.on("app:event", callback),
+    getVersion: () => ipcRenderer.invoke('get-app-version')
   },
   settings: {
     setMinimizeToTray: (value) => ipcRenderer.send("set-minimize-to-tray", value),
