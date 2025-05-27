@@ -90,6 +90,13 @@ Claude
 ![Claude](assets/images/Screenshot2.png)
 
 
+## Futuras Melhorias
+
+- Suporte a múltiplas janelas (caso queira cada IA em uma janela separada).
+- Exportar logs de conversas ou sessões com as IAs.
+- Adicionar abas dinâmicas com ícones customizados via drag-and-drop.
+
+
 ## Contribuição
 
 Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou pull requests.
@@ -97,13 +104,6 @@ Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou pull r
 ## Licença
 
 Este projeto está sob a licença MIT.
-
-
-🔄 Futuras Melhorias
-- Suporte a múltiplas janelas (caso queira cada IA em uma janela separada).
-- Exportar logs de conversas ou sessões com as IAs.
-- Adicionar abas dinâmicas com ícones customizados via drag-and-drop.
-
 
 ---
 
