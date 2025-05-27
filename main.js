@@ -14,7 +14,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'assets/js/preload.js'),
       webviewTag: true
     },
     icon: path.join(__dirname, 'icons', 'app.png')
