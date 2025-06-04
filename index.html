@@ -9,12 +9,12 @@
 </head>
 
 <body>
-  <!-- Barra de Menu -->
+  <!-- Barra de Menu HTML (pode ser removida se o menu nativo for preferido) -->
   <div id="menu-bar">
     <div class="menu-item">
       <span onclick="toggleMenu('arquivo')">Arquivo</span>
       <div id="arquivo-menu" class="dropdown-menu">
-        <div class="menu-option" onclick="window.electronAPI.closeApp()">Sair</div>
+        <div class="menu-option" onclick="exitApp()">Sair</div> <!-- Usar exitApp() -->
       </div>
     </div>
     <div class="menu-item">
@@ -25,33 +25,46 @@
     </div>
   </div>
 
+  <!-- Barra de Busca (Find in Page) -->
+  <div id="find-in-page-bar">
+    <input type="text" id="find-input" placeholder="Buscar na página...">
+    <button id="find-prev-btn">&lt;</button>
+    <button id="find-next-btn">&gt;</button>
+    <span id="find-results" class="find-results">0/0</span>
+    <button id="close-find-bar-btn" class="close-find-bar">X</button>
+  </div>
+
   <!-- Modal Configurações -->
   <div id="settings-modal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="hideSettings()">&times;</span>
       <h2>Configurações</h2>
-
       <div class="setting-item">
         <label class="setting-label">
           <input type="checkbox" id="minimize-to-tray" onchange="toggleMinimizeToTray()">
           <span class="checkmark"></span>
           Minimizar para a bandeja do sistema
         </label>
-        <p class="setting-description">Quando ativado, fechar a janela manterá o aplicativo em execução na bandeja do
-          sistema.</p>
+        <p class="setting-description">Quando ativado, fechar a janela manterá o aplicativo em execução na bandeja.</p>
       </div>
-
       <div class="setting-item">
         <h3>Comandos de ajuda</h3>
         <p class="shortcut-info"><strong>Botão direito:</strong> Menu de contexto nas abas</p>
+        <p class="shortcut-info"><strong>CTRL+R:</strong> Recarregar aba</p>
+        <p class="shortcut-info"><strong>CTRL+F:</strong> Buscar na aba</p>
+        <p class="shortcut-info"><strong>ESC:</strong> Fechar busca / modais</p>
       </div>
     </div>
   </div>
 
   <!-- Menu de Contexto das Abas -->
   <div id="tab-context-menu" class="context-menu">
-    <div class="context-option" onclick="reloadCurrentTab()">Recarregar</div>
+    <!-- Ação de recarregar agora é feita pelo menu principal (CTRL+R) -->
+    <!-- <div class="context-option" onclick="reloadCurrentTab()">Recarregar</div> -->
+    <div class="context-option" onclick="/* Adicionar outras ações se necessário */">Opção 1</div>
   </div>
+
+  <!-- Modal Sobre -->
   <div id="about-modal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="hideAbout()">&times;</span>
@@ -116,6 +129,7 @@
       <webview id="manus" src="https://manus.im/app" partition="persist:manus"></webview>
     </div>
 
+    <!-- Menu de Contexto Genérico (parece não usado) -->
     <div id="context-menu" style="display: none; position: absolute; z-index: 1000;" class="context-menu">
       <div class="context-option" onclick="closeCurrentTab()">Fechar</div>
       <div class="context-option" onclick="duplicateCurrentTab()">Duplicar</div>
