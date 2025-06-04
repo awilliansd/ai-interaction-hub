@@ -49,7 +49,7 @@ function showSettings() {
   if (modal) {
     modal.style.display = "block";
     const checkbox = document.getElementById("minimize-to-tray");
-    if(checkbox) checkbox.checked = minimizeToTray;
+    if (checkbox) checkbox.checked = minimizeToTray;
   }
   hideAllMenus();
 }
@@ -146,7 +146,7 @@ function hideFindBar() {
   const findBar = document.getElementById("find-in-page-bar");
   if (findBar) {
     findBar.style.display = "none";
-    
+
     // Se houver uma busca ativa, limpar
     if (activeSearch) {
       stopFindInPage();
@@ -158,7 +158,7 @@ function hideFindBar() {
 function startFindInPage(searchTerm) {
   const webview = getActiveWebview();
   if (!webview) return;
-  
+
   if (searchTerm && searchTerm.trim() !== "") {
     console.log(`[Renderer] Starting find in page with term: "${searchTerm}"`);
     lastSearchTerm = searchTerm;
@@ -171,7 +171,7 @@ function startFindInPage(searchTerm) {
 function findNext() {
   const webview = getActiveWebview();
   if (!webview || !activeSearch) return;
-  
+
   console.log(`[Renderer] Finding next occurrence of: "${lastSearchTerm}"`);
   webview.findInPage(lastSearchTerm, { forward: true });
 }
@@ -180,7 +180,7 @@ function findNext() {
 function findPrevious() {
   const webview = getActiveWebview();
   if (!webview || !activeSearch) return;
-  
+
   console.log(`[Renderer] Finding previous occurrence of: "${lastSearchTerm}"`);
   webview.findInPage(lastSearchTerm, { forward: false });
 }
@@ -189,7 +189,7 @@ function findPrevious() {
 function stopFindInPage() {
   const webview = getActiveWebview();
   if (!webview) return;
-  
+
   console.log(`[Renderer] Stopping find in page`);
   webview.stopFindInPage("clearSelection");
   activeSearch = false;
@@ -276,11 +276,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Mostra a primeira aba
   const firstTabButton = document.querySelector("#sidebar .sidebar-top button");
   if (firstTabButton) {
-      const firstTabId = firstTabButton.id.replace("btn-", "");
-      console.log(`[Renderer] Showing initial tab: ${firstTabId}`);
-      showTab(firstTabId);
+    const firstTabId = firstTabButton.id.replace("btn-", "");
+    console.log(`[Renderer] Showing initial tab: ${firstTabId}`);
+    showTab(firstTabId);
   } else {
-      console.warn("[Renderer] No initial tab found.");
+    console.warn("[Renderer] No initial tab found.");
   }
 
   // --- Configura Listeners para Comandos do Menu (via Preload) ---
@@ -308,7 +308,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         hideFindBar();
       }
     });
-    
+
     findInput.addEventListener("input", () => {
       if (findInput.value.trim() !== "") {
         startFindInPage(findInput.value);
@@ -334,6 +334,44 @@ document.addEventListener("DOMContentLoaded", async () => {
       const { activeMatchOrdinal, matches } = e.result;
       console.log(`[Renderer] Found in page: match ${activeMatchOrdinal} of ${matches}`);
       updateFindResults(activeMatchOrdinal, matches);
+    });
+
+    // Adiciona listeners para fechar menus ao interagir com webviews
+    webview.addEventListener("focus", () => {
+      console.log("[Renderer] Webview focus event - hiding menus");
+      hideAllMenus();
+      hideTabContextMenu();
+    });
+
+    // Captura cliques no webview para fechar menus
+    webview.addEventListener("mousedown", () => {
+      console.log("[Renderer] Webview mousedown event - hiding menus");
+      hideAllMenus();
+      hideTabContextMenu();
+    });
+
+    // Captura quando o webview começa a ser usado
+    webview.addEventListener("dom-ready", () => {
+      // Adiciona um listener para eventos dentro do webview
+      webview.addEventListener("ipc-message", (event) => {
+        if (event.channel === "webview-clicked") {
+          console.log("[Renderer] Received click event from webview - hiding menus");
+          hideAllMenus();
+          hideTabContextMenu();
+        }
+      });
+
+      // Injeta script para capturar cliques dentro do webview
+      webview.executeJavaScript(`
+        document.addEventListener('click', () => {
+          if (window.ipcRenderer) {
+            window.ipcRenderer.sendToHost('webview-clicked');
+          }
+        });
+        true; // Retorno necessário para executeJavaScript
+      `).catch(err => {
+        console.warn("[Renderer] Failed to inject click listener into webview:", err);
+      });
     });
   });
 });
