@@ -290,3 +290,57 @@ webview.active {
     background-color: #404040;
     border-left: 4px solid #00ccff;
 }
+
+/* Barra de Busca (Find in Page) */
+#find-in-page-bar {
+    position: fixed;
+    top: 40px; /* Ajustar para não sobrepor o menu HTML, se houver */
+    right: 20px;
+    background-color: #333;
+    padding: 8px;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    z-index: 1001; /* Acima do conteúdo, mas abaixo de modais talvez */
+    display: none; /* Começa escondido */
+    color: white;
+}
+
+#find-in-page-bar input[type="text"] {
+    margin-right: 5px;
+    padding: 4px;
+    border: 1px solid #555;
+    background-color: #444;
+    color: white;
+}
+
+#find-in-page-bar button {
+    padding: 4px 8px;
+    margin-left: 3px;
+    background-color: #555;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#find-in-page-bar button:hover {
+    background-color: #666;
+}
+
+#find-in-page-bar .find-results {
+    margin-left: 10px;
+    font-size: 0.9em;
+}
+
+#find-in-page-bar .close-find-bar {
+    margin-left: 10px;
+    background-color: transparent;
+    border: none;
+    color: #aaa;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#find-in-page-bar .close-find-bar:hover {
+    color: white;
+}
