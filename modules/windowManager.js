@@ -114,19 +114,19 @@ function getMainWindow() {
 }
 
 function showWindow() {
-    if (mainWindow) {
-        if (mainWindow.isMinimized()) {
-            mainWindow.restore();
-        }
-        mainWindow.show();
-        mainWindow.focus();
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
     }
+    mainWindow.show();
+    mainWindow.focus();
+  }
 }
 
 function hideWindow() {
-    if (mainWindow) {
-        mainWindow.hide();
-    }
+  if (mainWindow) {
+    mainWindow.hide();
+  }
 }
 
 module.exports = {
