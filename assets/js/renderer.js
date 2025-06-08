@@ -90,6 +90,16 @@ function hideAllMenus() {
   });
 }
 
+// Função para recarregar a aba atual (usada pelo menu de contexto)
+function reloadCurrentTab() {
+  const webview = getActiveWebview();
+  if (webview) {
+    console.log("[Renderer] Reloading current tab via context menu");
+    webview.reload();
+    hideTabContextMenu(); // Esconde o menu de contexto após a ação
+  }
+}
+
 // Funções de gerenciamento de abas
 function showTab(tabId) {
   document.querySelectorAll("webview").forEach(w => w.classList.remove("active"));

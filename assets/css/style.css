@@ -9,24 +9,25 @@ body {
 
 /* Barra de Menu */
 #menu-bar {
-    height: 30px;
+    height: 24px; /* Reduzido de 30px para 24px */
     background: #202020;
     border-bottom: 1px solid #404040;
     display: flex;
     align-items: center;
-    padding: 0 10px;
+    padding: 0 8px; /* Reduzido de 10px para 8px */
     color: white;
+    font-size: 12px; /* Adicionado tamanho de fonte menor */
 }
 
 .menu-item {
     position: relative;
-    margin-right: 20px;
+    margin-right: 16px; /* Reduzido de 20px para 16px */
 }
 
 .menu-item span {
-    padding: 5px 10px;
+    padding: 3px 8px; /* Reduzido de 5px 10px para 3px 8px */
     cursor: pointer;
-    border-radius: 3px;
+    border-radius: 2px; /* Reduzido de 3px para 2px */
     transition: background-color 0.2s;
     color: white;
 }
@@ -46,6 +47,7 @@ body {
     min-width: 120px;
     display: none;
     z-index: 1000;
+    font-size: 12px; /* Adicionado tamanho de fonte menor */
 }
 
 .dropdown-menu.show {
@@ -53,7 +55,7 @@ body {
 }
 
 .menu-option {
-    padding: 8px 12px;
+    padding: 6px 10px; /* Reduzido de 8px 12px para 6px 10px */
     cursor: pointer;
     transition: background-color 0.2s;
     color: white;
@@ -223,7 +225,7 @@ body {
 #main-content {
     display: flex;
     flex: 1;
-    height: calc(100vh - 31px); /* Subtrai altura da barra de menu */
+    height: calc(100vh - 25px); /* Ajustado de 31px para 25px para refletir a nova altura do menu */
 }
 
 #sidebar {
@@ -294,7 +296,7 @@ webview.active {
 /* Barra de Busca (Find in Page) */
 #find-in-page-bar {
     position: fixed;
-    top: 40px; /* Ajustar para não sobrepor o menu HTML, se houver */
+    top: 34px; /* Ajustado de 40px para 34px para refletir a nova altura do menu */
     right: 20px;
     background-color: #333;
     padding: 8px;
