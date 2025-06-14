@@ -1,5 +1,5 @@
 // main.js (Refatorado, Corrigido e com Single Instance Lock)
-const { app } = require("electron");
+const { app, session } = require("electron");
 const path = require("path");
 
 // Importa os módulos
@@ -41,6 +41,23 @@ if (!gotTheLock) {
   appLifecycle.initializeAppLifecycle(app, createWindowWithOptions, settingsManager);
 
   app.whenReady().then(() => {
+    // 1. Configura as flags de linha de comando para idioma
+    // Isso influencia como o Chromium se comporta em relação ao idioma
+    app.commandLine.appendSwitch('lang', 'pt-BR');
+    app.commandLine.appendSwitch('accept-lang', 'pt-BR');
+
+    // 2. Intercepta e modifica o cabeçalho Accept-Language para todas as requisições
+    // Isso garante que o navegador envie explicitamente a preferência por português do Brasil
+    session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+      // Define o cabeçalho Accept-Language
+      // pt-BR: Português do Brasil (alta prioridade)
+      // pt: Português genérico (prioridade média)
+      // en-US: Inglês dos EUA (baixa prioridade)
+      // en: Inglês genérico (ainda mais baixa prioridade)
+      details.requestHeaders['Accept-Language'] = 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7';
+      callback({ requestHeaders: details.requestHeaders });
+    });
+
     // Cria a janela principal
     const mainWindow = windowManager.createWindow(app, initialSettings);
 
