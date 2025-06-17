@@ -1,5 +1,5 @@
 // main.js (Refatorado, Corrigido e com Single Instance Lock)
-const { app, session } = require("electron");
+const { app, session, Menu, MenuItem } = require("electron");
 const path = require("path");
 
 // Importa os módulos
@@ -60,6 +60,80 @@ if (!gotTheLock) {
 
     // Cria a janela principal
     const mainWindow = windowManager.createWindow(app, initialSettings);
+
+    // Configurar webviews quando forem anexadas
+    mainWindow.webContents.on('did-attach-webview', (event, webContents) => {
+      console.log("[Main Process] Webview attached, configuring spellcheck and context menu");
+      
+      // Habilitar verificação ortográfica
+      webContents.session.setSpellCheckerLanguages(['pt-BR']);
+      webContents.session.setSpellCheckerEnabled(true);
+      
+      // Configurar menu de contexto para webviews
+      webContents.on('context-menu', (event, params) => {
+        const menu = new Menu();
+        
+        // Adicionar opções de correção ortográfica se houver sugestões
+        if (params.misspelledWord) {
+          for (const suggestion of params.dictionarySuggestions) {
+            menu.append(new MenuItem({
+              label: suggestion,
+              click: () => webContents.replaceMisspelling(suggestion)
+            }));
+          }
+          
+          if (params.dictionarySuggestions.length > 0) {
+            menu.append(new MenuItem({ type: 'separator' }));
+          }
+          
+          menu.append(new MenuItem({
+            label: 'Adicionar ao dicionário',
+            click: () => webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
+          }));
+          
+          menu.append(new MenuItem({ type: 'separator' }));
+        }
+        
+        // Adicionar opções padrão de edição
+        if (params.isEditable) {
+          if (params.selectionText) {
+            menu.append(new MenuItem({
+              label: 'Recortar',
+              role: 'cut'
+            }));
+            menu.append(new MenuItem({
+              label: 'Copiar',
+              role: 'copy'
+            }));
+          }
+          
+          menu.append(new MenuItem({
+            label: 'Colar',
+            role: 'paste'
+          }));
+          
+          menu.append(new MenuItem({ type: 'separator' }));
+        }
+        
+        // Opções para texto selecionado
+        if (params.selectionText) {
+          menu.append(new MenuItem({
+            label: 'Copiar',
+            role: 'copy'
+          }));
+          menu.append(new MenuItem({ type: 'separator' }));
+        }
+        
+        // Opções gerais
+        menu.append(new MenuItem({
+          label: 'Selecionar tudo',
+          role: 'selectAll'
+        }));
+        
+        // Mostrar o menu de contexto
+        menu.popup();
+      });
+    });
 
     // Adiciona o manipulador de evento 'close'
     mainWindow.on("close", (event) => {
