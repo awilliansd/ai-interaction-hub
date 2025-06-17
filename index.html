@@ -115,16 +115,24 @@
     </div>
 
     <div id="webview-container">
-      <webview id="chatgpt" src="https://chat.openai.com" class="active" partition="persist:chatgpt"></webview>
-      <webview id="claude" src="https://claude.ai" partition="persist:claude"></webview>
+      <webview id="chatgpt" src="https://chat.openai.com" class="active" partition="persist:chatgpt" 
+        spellcheck="true" contextmenu="true"></webview>
+      <webview id="claude" src="https://claude.ai" partition="persist:claude" 
+        spellcheck="true" contextmenu="true"></webview>
       <webview id="copilot" src="https://copilot.microsoft.com" partition="persist:copilot"
-        useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36">
+        useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+        spellcheck="true" contextmenu="true">
       </webview>
-      <webview id="deepseek" src="https://chat.deepseek.com" partition="persist:deepseek"></webview>
-      <webview id="gemini" src="https://gemini.google.com" partition="persist:gemini"></webview>
-      <webview id="grok" src="https://grok.com" partition="persist:grok"></webview>
-      <webview id="metaai" src="https://www.meta.ai" partition="persist:metaai"></webview>
-      <webview id="manus" src="https://manus.im/app" partition="persist:manus"></webview>
+      <webview id="deepseek" src="https://chat.deepseek.com" partition="persist:deepseek" 
+        spellcheck="true" contextmenu="true"></webview>
+      <webview id="gemini" src="https://gemini.google.com" partition="persist:gemini" 
+        spellcheck="true" contextmenu="true"></webview>
+      <webview id="grok" src="https://grok.com" partition="persist:grok" 
+        spellcheck="true" contextmenu="true"></webview>
+      <webview id="metaai" src="https://www.meta.ai" partition="persist:metaai" 
+        spellcheck="true" contextmenu="true"></webview>
+      <webview id="manus" src="https://manus.im/app" partition="persist:manus" 
+        spellcheck="true" contextmenu="true"></webview>
     </div>
 
     <!-- Menu de Contexto Genérico (parece não usado) -->

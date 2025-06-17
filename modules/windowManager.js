@@ -28,7 +28,8 @@ function createWindow(app, settings) {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(app.getAppPath(), "assets/js/preload.js"),
-      webviewTag: true
+      webviewTag: true,
+      spellcheck: true // Habilita verificação ortográfica globalmente
     },
     icon: path.join(app.getAppPath(), "icons", "app.png")
   });
@@ -56,7 +57,9 @@ function createWindow(app, settings) {
         { role: 'cut', label: 'Recortar' },
         { role: 'copy', label: 'Copiar' },
         { role: 'paste', label: 'Colar' },
-        { role: 'selectAll', label: 'Selecionar Tudo' }
+        { role: 'selectAll', label: 'Selecionar Tudo' },
+        { type: 'separator' },
+        { role: 'toggleSpellChecker', label: 'Verificação Ortográfica' }
       ]
     },
     {
