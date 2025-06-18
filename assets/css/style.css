@@ -263,12 +263,20 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    transition: background-color 0.2s;
+    border-radius: 6px;
+    transition: background-color 0.2s, transform 0.2s, color 0.2s;
 }
 
 #sidebar button:hover {
     background-color: #404040;
+    transform: scale(1.1);
+    color: #00ccff;
+}
+
+#sidebar button.active-button {
+    background-color: #505050;
+    transform: scale(1.1);
+    color: #00ccff;
 }
 
 #webview-container {
