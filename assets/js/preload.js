@@ -27,6 +27,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     onReloadActiveTab: (callback) => ipcRenderer.on("command:reload-active-tab", () => callback()),
     onFindInActiveTab: (callback) => ipcRenderer.on("command:find-in-active-tab", () => callback()),
     onStopFindInActiveTab: (callback) => ipcRenderer.on("command:stop-find-in-active-tab", () => callback()),
+    onShowSettings: (callback) => ipcRenderer.on("command:show-settings", () => callback()),
+    onShowAbout: (callback) => ipcRenderer.on("command:show-about", () => callback()),
+    onExitApp: (callback) => ipcRenderer.on("command:exit-app", () => callback()),
+    onOpenGitHub: (callback) => ipcRenderer.on("command:open-github", () => callback())
   }
 });
 
