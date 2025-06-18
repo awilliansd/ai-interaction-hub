@@ -84,7 +84,7 @@ function createWindow(app, settings) {
       ]
     },
     {
-      label: 'Ver',
+      label: 'Ferramentas',
       submenu: [
         {
           label: 'Recarregar Aba Ativa',
