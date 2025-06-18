@@ -49,6 +49,27 @@ function createWindow(app, settings) {
   // --- Criação do Menu com Aceleradores ---
   const menuTemplate = [
     {
+      label: 'Arquivo',
+      submenu: [
+        {
+          label: 'Configurações',
+          click: () => {
+            console.log("[Main Process] Menu: Configurações clicked");
+            sendCommandToRenderer('command:show-settings');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Sair',
+          accelerator: 'Alt+F4',
+          click: () => {
+            console.log("[Main Process] Menu: Sair clicked");
+            sendCommandToRenderer('command:exit-app');
+          }
+        }
+      ]
+    },
+    {
       label: 'Editar',
       submenu: [
         { role: 'undo', label: 'Desfazer' },
@@ -81,16 +102,20 @@ function createWindow(app, settings) {
             sendCommandToRenderer('command:find-in-active-tab');
           }
         },
-        {
-          label: 'Parar Busca',
-          accelerator: 'Escape',
-          click: () => {
-            console.log("[Main Process] Accelerator Escape triggered.");
-            sendCommandToRenderer('command:stop-find-in-active-tab');
-          }
-        },
         { type: 'separator' },
         { role: 'toggleDevTools', label: 'Alternar Ferramentas de Desenvolvedor' }
+      ]
+    },
+    {
+      label: 'Ajuda',
+      submenu: [
+        {
+          label: 'Sobre',
+          click: () => {
+            console.log("[Main Process] Menu: Sobre clicked");
+            sendCommandToRenderer('command:show-about');
+          }
+        }
       ]
     }
   ];
@@ -99,10 +124,10 @@ function createWindow(app, settings) {
   Menu.setApplicationMenu(menu);
   console.log("[Main Process] Application menu set.");
 
-  // Ocultar a barra de menu nativa (descomente para ocultar após testes)
-  mainWindow.setMenuBarVisibility(false);
-  mainWindow.setAutoHideMenuBar(true);
-  console.log("[Main Process] Menu bar auto-hide set to true.");
+  // Configurar o menu para estar sempre visível
+  mainWindow.setMenuBarVisibility(true);
+  mainWindow.setAutoHideMenuBar(false);
+  console.log("[Main Process] Menu bar set to always visible.");
 
   mainWindow.on("closed", () => {
     console.log("[Main Process] Main window closed.");

@@ -237,6 +237,30 @@ function handleStopFindInActiveTab() {
   hideFindBar();
 }
 
+// Ação: Mostrar configurações (chamada via IPC)
+function handleShowSettings() {
+  console.log("[Renderer] Received command: show-settings");
+  showSettings();
+}
+
+// Ação: Mostrar sobre (chamada via IPC)
+function handleShowAbout() {
+  console.log("[Renderer] Received command: show-about");
+  showAbout();
+}
+
+// Ação: Sair do aplicativo (chamada via IPC)
+function handleExitApp() {
+  console.log("[Renderer] Received command: exit-app");
+  exitApp();
+}
+
+// Ação: Abrir GitHub (chamada via IPC)
+function handleOpenGitHub() {
+  console.log("[Renderer] Received command: open-github");
+  openGitHub();
+}
+
 // --- Eventos Globais ---
 document.addEventListener("click", (e) => {
   if (!e.target.closest(".menu-item")) {
@@ -299,6 +323,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.electronAPI.commands.onReloadActiveTab(handleReloadActiveTab);
     window.electronAPI.commands.onFindInActiveTab(handleFindInActiveTab);
     window.electronAPI.commands.onStopFindInActiveTab(handleStopFindInActiveTab);
+    
+    // Novos listeners para comandos do menu nativo
+    if (window.electronAPI.commands.onShowSettings) {
+      window.electronAPI.commands.onShowSettings(handleShowSettings);
+    }
+    if (window.electronAPI.commands.onShowAbout) {
+      window.electronAPI.commands.onShowAbout(handleShowAbout);
+    }
+    if (window.electronAPI.commands.onExitApp) {
+      window.electronAPI.commands.onExitApp(handleExitApp);
+    }
+    if (window.electronAPI.commands.onOpenGitHub) {
+      window.electronAPI.commands.onOpenGitHub(handleOpenGitHub);
+    }
+    
     console.log("[Renderer] Command listeners set up.");
   } else {
     console.error("[Renderer] electronAPI.commands not found! Preload script might have failed.");
