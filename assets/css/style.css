@@ -289,8 +289,8 @@ webview.active {
 }
 
 #sidebar button.active-button {
-    background-color: #404040;
-    border-left: 4px solid #00ccff;
+    background-color: #505050;
+    /* border-left: 4px solid #00ccff; */ /* removido para evitar os "pontinhos" */
 }
 
 /* Barra de Busca (Find in Page) */
