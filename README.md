@@ -16,6 +16,7 @@
   - Gemini
   - Grok
   - Meta AI
+  - Perplexity
   - Manus
 - Alternância rápida entre assistentes via barra lateral
 - Suporte a múltiplas abas e duplicação de sessões
