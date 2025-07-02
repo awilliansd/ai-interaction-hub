@@ -28,6 +28,10 @@ function openGitHub() {
   window.electronAPI.links.openGitHub();
 }
 
+function getCurrentYear() {
+  return new Date().getFullYear();
+}
+
 function showAbout() {
   const modal = document.getElementById("about-modal");
   if (modal) {
@@ -280,6 +284,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   console.log("[Renderer] DOMContentLoaded event fired.");
   const menu = document.querySelector(".menu");
   const versionSpan = document.getElementById("app-version");
+  const yearSpan = document.getElementById("current-year");
+  
+  if (yearSpan) {
+    yearSpan.textContent = getCurrentYear();
+  }
 
   // Busca a versão da aplicação
   if (versionSpan && window.electronAPI?.app?.getVersion) {
