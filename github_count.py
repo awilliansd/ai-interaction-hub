@@ -3,8 +3,8 @@ import requests
 # Informações do repositório e release
 owner = "awilliansd"
 repo = "ai-interaction-hub"
-tag = "v1.0.14"
-asset_name = "AI.Interaction.Hub.Setup.1.0.14.exe"
+tag = "v1.0.15"
+asset_name = "AI.Interaction.Hub.Setup.1.0.15.exe"
 
 # Opcional: coloque seu token GitHub para evitar limite de rate
 # token = "ghp_xxx..."  # substitua pelo seu token se quiser
