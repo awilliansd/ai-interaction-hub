@@ -285,7 +285,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const menu = document.querySelector(".menu");
   const versionSpan = document.getElementById("app-version");
   const yearSpan = document.getElementById("current-year");
-  
+  const titleTag = document.querySelector("title"); // Seleciona a tag <title>
+
   if (yearSpan) {
     yearSpan.textContent = getCurrentYear();
   }
@@ -296,9 +297,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       const version = await window.electronAPI.app.getVersion();
       versionSpan.innerText = version ? `v${version}` : "N/A";
       console.log(`[Renderer] App version set to: ${versionSpan.innerText}`);
+
+      // ATUALIZA O TÍTULO DA PÁGINA AQUI
+      if (titleTag) {
+        titleTag.textContent = `AI Interaction Hub v${version}`;
+        console.log(`[Renderer] Page title updated to: ${titleTag.textContent}`);
+      }
+
     } catch (error) {
       console.error("Erro ao buscar versão:", error);
       versionSpan.innerText = "Erro";
+      if (titleTag) { // Ainda pode atualizar com erro ou N/A
+        titleTag.textContent = `AI Interaction Hub (Erro ao carregar versão)`;
+      }
     }
   }
 
