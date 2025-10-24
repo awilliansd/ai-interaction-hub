@@ -1,0 +1,38 @@
+# Nome do Workflow
+name: Continuous Integration
+
+# Gatilhos (Triggers)
+# Este workflow será executado em push ou pull request para a branch 'main'
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Jobs
+# Um workflow é composto por um ou mais jobs, que rodam em paralelo por padrão
+jobs:
+  # O nome do job é 'build'
+  build:
+    # O tipo de máquina virtual para rodar o job
+    runs-on: ubuntu-latest
+
+    # Passos (Steps) que compõem o job
+    steps:
+      # 1. Faz o checkout do código do repositório para a máquina virtual
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Configura o ambiente Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Você pode ajustar para a versão que utiliza no seu projeto
+
+      # 3. Instala as dependências do projeto
+      - name: Install dependencies
+        run: npm install
+
+      # 4. Executa os testes
+      - name: Run tests
+        run: npm test
