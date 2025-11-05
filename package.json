@@ -1,6 +1,6 @@
 {
   "name": "ai-interaction-hub",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "Hub unificado para múltiplos chats de IA",
   "main": "main.js",
   "scripts": {
@@ -19,6 +19,11 @@
     "win": {
       "target": "nsis",
       "icon": "icons/app.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
     }
   }
 }
