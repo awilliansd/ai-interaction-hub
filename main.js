@@ -1,4 +1,4 @@
-// main.js (Refatorado, Corrigido e com Single Instance Lock)
+// main.js (Refatorado, Corrigido e com User-Agent Dinâmico)
 const { app, session, Menu, MenuItem } = require("electron");
 const path = require("path");
 
@@ -13,26 +13,18 @@ const appLifecycle = require("./modules/appLifecycle");
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
-  // Se não conseguiu a trava, significa que outra instância já está rodando.
-  // Fecha esta instância imediatamente.
   console.log("Outra instância já está rodando. Fechando esta.");
   app.quit();
 } else {
-  // Esta é a primeira instância ou a única instância.
-  // Configura o listener para o evento 'second-instance'.
   app.on("second-instance", (event, commandLine, workingDirectory) => {
-    // Alguém tentou rodar uma segunda instância. Foca a janela da nossa instância.
     console.log("Tentativa de abrir segunda instância detectada.");
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow) {
-      // Se a janela estiver minimizada ou escondida, restaura e foca.
-      windowManager.showWindow(); // Usa a função do windowManager que já lida com isso
+      windowManager.showWindow();
     }
   });
 
-  // Continua com a inicialização normal da aplicação...
-
-  // Inicializa o gerenciador de configurações, passando 'app'
+  // Inicializa o gerenciador de configurações
   settingsManager.initialize(app);
   const initialSettings = settingsManager.loadSettings();
 
@@ -40,20 +32,26 @@ if (!gotTheLock) {
   const createWindowWithOptions = (settings) => windowManager.createWindow(app, settings);
   appLifecycle.initializeAppLifecycle(app, createWindowWithOptions, settingsManager);
 
+  // --- INÍCIO DA NOVA ABORDAGEM: USER-AGENT DINÂMICO ---
+  // Obtém a versão do Chromium que o Electron está usando.
+  const chromeVersion = process.versions.chrome;
+  // Cria um template de User-Agent moderno (baseado no Windows 11)
+  const userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`;
+  
+  // Define o User-Agent globalmente para a aplicação.
+  // Isso é mais eficaz e limpo do que interceptar cada requisição.
+  app.userAgentFallback = userAgent;
+  console.log(`[Main Process] User-Agent definido como: ${userAgent}`);
+  // --- FIM DA NOVA ABORDAGEM ---
+
   app.whenReady().then(() => {
     // 1. Configura as flags de linha de comando para idioma
-    // Isso influencia como o Chromium se comporta em relação ao idioma
     app.commandLine.appendSwitch('lang', 'pt-BR');
     app.commandLine.appendSwitch('accept-lang', 'pt-BR');
 
-    // 2. Intercepta e modifica o cabeçalho Accept-Language para todas as requisições
-    // Isso garante que o navegador envie explicitamente a preferência por português do Brasil
+    // 2. Intercepta e modifica o cabeçalho Accept-Language
+    // Não precisamos mais modificar o User-Agent aqui, pois o app.userAgentFallback já cuida disso.
     session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-      // Define o cabeçalho Accept-Language
-      // pt-BR: Português do Brasil (alta prioridade)
-      // pt: Português genérico (prioridade média)
-      // en-US: Inglês dos EUA (baixa prioridade)
-      // en: Inglês genérico (ainda mais baixa prioridade)
       details.requestHeaders['Accept-Language'] = 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7';
       callback({ requestHeaders: details.requestHeaders });
     });
@@ -73,7 +71,6 @@ if (!gotTheLock) {
       webContents.on('context-menu', (event, params) => {
         const menu = new Menu();
         
-        // Adicionar opções de correção ortográfica se houver sugestões
         if (params.misspelledWord) {
           for (const suggestion of params.dictionarySuggestions) {
             menu.append(new MenuItem({
@@ -81,56 +78,31 @@ if (!gotTheLock) {
               click: () => webContents.replaceMisspelling(suggestion)
             }));
           }
-          
           if (params.dictionarySuggestions.length > 0) {
             menu.append(new MenuItem({ type: 'separator' }));
           }
-          
           menu.append(new MenuItem({
             label: 'Adicionar ao dicionário',
             click: () => webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
           }));
-          
           menu.append(new MenuItem({ type: 'separator' }));
         }
         
-        // Adicionar opções padrão de edição
         if (params.isEditable) {
           if (params.selectionText) {
-            menu.append(new MenuItem({
-              label: 'Recortar',
-              role: 'cut'
-            }));
-            menu.append(new MenuItem({
-              label: 'Copiar',
-              role: 'copy'
-            }));
+            menu.append(new MenuItem({ role: 'cut', label: 'Recortar' }));
+            menu.append(new MenuItem({ role: 'copy', label: 'Copiar' }));
           }
-          
-          menu.append(new MenuItem({
-            label: 'Colar',
-            role: 'paste'
-          }));
-          
+          menu.append(new MenuItem({ role: 'paste', label: 'Colar' }));
           menu.append(new MenuItem({ type: 'separator' }));
         }
         
-        // Opções para texto selecionado
         if (params.selectionText) {
-          menu.append(new MenuItem({
-            label: 'Copiar',
-            role: 'copy'
-          }));
+          menu.append(new MenuItem({ role: 'copy', label: 'Copiar' }));
           menu.append(new MenuItem({ type: 'separator' }));
         }
         
-        // Opções gerais
-        menu.append(new MenuItem({
-          label: 'Selecionar tudo',
-          role: 'selectAll'
-        }));
-        
-        // Mostrar o menu de contexto
+        menu.append(new MenuItem({ role: 'selectAll', label: 'Selecionar tudo' }));
         menu.popup();
       });
     });
