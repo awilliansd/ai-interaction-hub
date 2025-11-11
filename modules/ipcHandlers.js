@@ -14,8 +14,8 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     console.warn("IPC Handlers: mainWindow não está definida na inicialização.");
   }
   if (!settingsManager) {
-      console.error("IPC Handlers: settingsManager não fornecido.");
-      return;
+    console.error("IPC Handlers: settingsManager não fornecido.");
+    return;
   }
 
   // Recarregar uma aba específica (lógica do lado do renderer)
@@ -24,7 +24,7 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     if (win) {
       win.webContents.send("reload-tab", tabId);
     } else {
-        console.warn("IPC reload-tab: Janela principal não encontrada.");
+      console.warn("IPC reload-tab: Janela principal não encontrada.");
     }
   });
 
@@ -75,15 +75,33 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
   // Handler para carregar configurações
   ipcMain.removeHandler("get-settings");
   ipcMain.handle("get-settings", () => {
-      return settingsManager.loadSettings();
+    return settingsManager.loadSettings();
   });
 
   // Handler para salvar configurações
   ipcMain.removeHandler("save-settings");
   ipcMain.handle("save-settings", (event, settings) => {
-      settingsManager.saveSettings(settings);
-      // Pode retornar sucesso ou falha
-      return true;
+    settingsManager.saveSettings(settings);
+    // Pode retornar sucesso ou falha
+    return true;
+  });
+
+  ipcMain.on("clear-app-cache", async () => {
+    try {
+      const win = require("./windowManager").getMainWindow();
+      if (win) {
+        const ses = win.webContents.session;
+        await ses.clearCache();
+        await ses.clearStorageData({
+          storages: ['cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers', 'cachestorage']
+        });
+        console.log("[IPC Handler] Cache e dados de armazenamento limpos.");
+        // Recarrega a aplicação para refletir a limpeza
+        win.reload();
+      }
+    } catch (error) {
+      console.error("Erro ao limpar o cache:", error);
+    }
   });
 
   console.log("Manipuladores IPC inicializados.");

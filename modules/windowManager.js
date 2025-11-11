@@ -7,7 +7,6 @@ let mainWindow = null;
 // Função auxiliar para enviar comando para o renderer
 function sendCommandToRenderer(command) {
   if (mainWindow && mainWindow.webContents) {
-    // Log explícito no processo principal para confirmar o envio
     console.log(`[Main Process] Attempting to send command: ${command}`);
     mainWindow.webContents.send(command);
   } else {
@@ -103,6 +102,15 @@ function createWindow(app, settings) {
           }
         },
         { type: 'separator' },
+        {
+          label: 'Limpar Cache e Reiniciar',
+          click: () => {
+            console.log("[Main Process] Menu: Limpar Cache clicado.");
+            // Envia o comando para o handler IPC
+            const { ipcMain } = require('electron');
+            ipcMain.emit('clear-app-cache');
+          }
+        },
         { role: 'toggleDevTools', label: 'Alternar Ferramentas de Desenvolvedor' }
       ]
     },
