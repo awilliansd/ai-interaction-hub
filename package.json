@@ -1,6 +1,6 @@
 {
   "name": "ai-interaction-hub",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "Hub unificado para múltiplos chats de IA",
   "main": "main.js",
   "scripts": {
@@ -9,8 +9,8 @@
     "test": "jest"
   },
   "devDependencies": {
-    "electron": "^29.4.6",
-    "electron-builder": "^23.6.0",
+    "electron": "^39.2.3",
+    "electron-builder": "^26.0.12",
     "jest": "^30.2.0"
   },
   "build": {
