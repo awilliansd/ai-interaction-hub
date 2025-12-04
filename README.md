@@ -9,15 +9,16 @@
 ## Funcionalidades
 
 - Interface unificada para múltiplos chats de IA:
+  - Gemini
   - ChatGPT
   - Claude
-  - Microsoft Copilot
   - DeepSeek
-  - Gemini
   - Grok
+  - Manus
+  - Microsoft Copilot
   - Meta AI
   - Perplexity
-  - Manus
+
 - Alternância rápida entre assistentes via barra lateral
 - Suporte a múltiplas abas e duplicação de sessões
 - Menu de contexto com opções de recarregar, fechar e duplicar abas
