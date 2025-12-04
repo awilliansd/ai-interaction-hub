@@ -1,5 +1,5 @@
 // main.js (Refatorado - User-Agent apenas para Grok)
-const { app, session, Menu, MenuItem } = require("electron");
+const { app, session, Menu, MenuItem, ipcMain } = require("electron");
 const path = require("path");
 
 // Importa os módulos
@@ -37,6 +37,50 @@ if (!gotTheLock) {
   const grokUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
   console.log(`[Main Process] User-Agent do Grok preparado: ${grokUserAgent}`);
   // NÃO definimos app.userAgentFallback globalmente
+
+  // Handler IPC para obter o User-Agent do Grok
+  ipcMain.handle('get-grok-user-agent', () => {
+    return grokUserAgent;
+  });
+
+  // Handler IPC para mostrar o menu de contexto da webview
+  ipcMain.handle('show-webview-context-menu', (_event, params) => {
+    const menu = new Menu();
+
+    if (params.misspelledWord) {
+      for (const suggestion of params.dictionarySuggestions) {
+        menu.append(new MenuItem({
+          label: suggestion,
+          click: () => _event.sender.replaceMisspelling(suggestion)
+        }));
+      }
+      if (params.dictionarySuggestions.length > 0) {
+        menu.append(new MenuItem({ type: 'separator' }));
+      }
+      menu.append(new MenuItem({
+        label: 'Adicionar ao dicionário',
+        click: () => _event.sender.session.addWordToSpellCheckerDictionary(params.misspelledWord)
+      }));
+      menu.append(new MenuItem({ type: 'separator' }));
+    }
+
+    if (params.isEditable) {
+      if (params.selectionText) {
+        menu.append(new MenuItem({ role: 'cut', label: 'Recortar' }));
+        menu.append(new MenuItem({ role: 'copy', label: 'Copiar' }));
+      }
+      menu.append(new MenuItem({ role: 'paste', label: 'Colar' }));
+      menu.append(new MenuItem({ type: 'separator' }));
+    }
+
+    if (params.selectionText) {
+      menu.append(new MenuItem({ role: 'copy', label: 'Copiar' }));
+      menu.append(new MenuItem({ type: 'separator' }));
+    }
+
+    menu.append(new MenuItem({ role: 'selectAll', label: 'Selecionar tudo' }));
+    menu.popup();
+  });
 
   app.whenReady().then(() => {
     // 1. Configura as flags de linha de comando para idioma
@@ -86,64 +130,17 @@ if (!gotTheLock) {
       }
     }
 
-    // Configurar webviews quando forem anexadas
-    mainWindow.webContents.on('did-attach-webview', (_event, webContents) => {
-      console.log("[Main Process] Webview attached, configuring spellcheck and context menu");
+    // NOTA: O listener 'did-attach-webview' foi removido, pois as webviews são criadas e destruídas
+    // dinamicamente no processo de renderização para otimização de memória.
+    // As configurações de segurança e contexto de menu devem ser aplicadas
+    // diretamente na webview no processo de renderização, se necessário,
+    // ou o código deve ser adaptado para usar o webContents da janela principal
+    // para configurações globais.
 
-      // Habilitar verificação ortográfica
-      webContents.session.setSpellCheckerLanguages(['pt-BR']);
-      webContents.session.setSpellCheckerEnabled(true);
-
-      // Configurar User-Agent personalizado APENAS para Grok
-      webContents.on('did-start-navigation', (_event, url) => {
-        if (url.includes('grok.com') || url.includes('x.ai')) {
-          webContents.setUserAgent(grokUserAgent);
-          console.log(`[Main Process] User-Agent personalizado aplicado para Grok: ${url}`);
-        }
-      });
-
-      // Configurar segurança para todos os serviços
-      configureWebviewSecurity(webContents);
-
-      // Configurar menu de contexto para webviews
-      webContents.on('context-menu', (_event, params) => {
-        const menu = new Menu();
-
-        if (params.misspelledWord) {
-          for (const suggestion of params.dictionarySuggestions) {
-            menu.append(new MenuItem({
-              label: suggestion,
-              click: () => webContents.replaceMisspelling(suggestion)
-            }));
-          }
-          if (params.dictionarySuggestions.length > 0) {
-            menu.append(new MenuItem({ type: 'separator' }));
-          }
-          menu.append(new MenuItem({
-            label: 'Adicionar ao dicionário',
-            click: () => webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
-          }));
-          menu.append(new MenuItem({ type: 'separator' }));
-        }
-
-        if (params.isEditable) {
-          if (params.selectionText) {
-            menu.append(new MenuItem({ role: 'cut', label: 'Recortar' }));
-            menu.append(new MenuItem({ role: 'copy', label: 'Copiar' }));
-          }
-          menu.append(new MenuItem({ role: 'paste', label: 'Colar' }));
-          menu.append(new MenuItem({ type: 'separator' }));
-        }
-
-        if (params.selectionText) {
-          menu.append(new MenuItem({ role: 'copy', label: 'Copiar' }));
-          menu.append(new MenuItem({ type: 'separator' }));
-        }
-
-        menu.append(new MenuItem({ role: 'selectAll', label: 'Selecionar tudo' }));
-        menu.popup();
-      });
-    });
+    // Mantendo a função configureWebviewSecurity, caso seja útil para a janela principal
+    // ou se for necessário reintroduzir a lógica de webview.
+    // Por enquanto, o código de segurança e menu de contexto específico de webview
+    // foi removido do processo principal.
 
     // Adiciona o manipulador de evento 'close'
     mainWindow.on("close", (event) => {
