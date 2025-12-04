@@ -7,7 +7,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     close: () => ipcRenderer.send("app:close"),
     exit: () => ipcRenderer.send("exit-app"),
     onEvent: (callback) => ipcRenderer.on("app:event", callback), // Exemplo genérico
-    getVersion: () => ipcRenderer.invoke('get-app-version')
+    getVersion: () => ipcRenderer.invoke('get-app-version'),
+    getGrokUserAgent: () => ipcRenderer.invoke('get-grok-user-agent'),
+    showWebviewContextMenu: (params) => ipcRenderer.invoke('show-webview-context-menu', params)
   },
   // Funções relacionadas às configurações
   settings: {

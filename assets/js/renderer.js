@@ -1,7 +1,21 @@
-// Estado das configurações
-let minimizeToTray = false;
-const savedMinimizeToTray = localStorage.getItem("minimizeToTray");
-minimizeToTray = savedMinimizeToTray === "false";
+// Configuração das abas
+const tabConfigs = {
+  gemini: { url: "https://gemini.google.com/app", partition: "persist:gemini" },
+  chatgpt: { url: "https://chat.openai.com", partition: "persist:chatgpt" },
+  claude: { url: "https://claude.ai", partition: "persist:claude" },
+  deepseek: { url: "https://chat.deepseek.com", partition: "persist:deepseek" },
+  grok: { url: "https://grok.com", partition: "persist:grok" },
+  manus: { url: "https://manus.im/app", partition: "persist:manus" },
+  copilot: { url: "https://copilot.microsoft.com", partition: "persist:copilot" },
+  metaai: { url: "https://www.meta.ai", partition: "persist:metaai" },
+  perplexity: { url: "https://www.perplexity.ai", partition: "persist:perplexity" },
+};
+
+// Mapa para rastrear as webviews ativas (apenas a ativa estará aqui)
+let activeWebview = null;
+let currentTabId = null;
+
+// Estado da busca
 
 // Estado da busca
 let lastSearchTerm = "";
@@ -105,17 +119,118 @@ function reloadCurrentTab() {
 }
 
 // Funções de gerenciamento de abas
+
+// Função para anexar todos os listeners necessários a uma nova webview
+function attachWebviewListeners(webview) {
+  // Listener para resultados de busca
+  webview.addEventListener("found-in-page", (e) => {
+    const { activeMatchOrdinal, matches } = e.result;
+    console.log(`[Renderer] Found in page: match ${activeMatchOrdinal} of ${matches}`);
+    updateFindResults(activeMatchOrdinal, matches);
+  });
+
+  // Listeners para fechar menus ao interagir com webviews
+  const hideMenus = () => {
+    console.log("[Renderer] Webview interaction - hiding menus");
+    hideAllMenus();
+    hideTabContextMenu();
+  };
+
+  webview.addEventListener("focus", hideMenus);
+  webview.addEventListener("mousedown", hideMenus);
+
+  // Captura quando o webview começa a ser usado
+  webview.addEventListener("dom-ready", () => {
+    // Adiciona um listener para eventos dentro do webview
+    webview.addEventListener("ipc-message", (event) => {
+      if (event.channel === "webview-clicked") {
+        hideMenus();
+      }
+    });
+
+    // Injeta script para capturar cliques dentro do webview
+    webview.executeJavaScript(`
+      document.addEventListener('click', () => {
+        if (window.ipcRenderer) {
+          window.ipcRenderer.sendToHost('webview-clicked');
+        }
+      });
+      true; // Retorno necessário para executeJavaScript
+    `).catch(err => {
+      console.warn("[Renderer] Failed to inject click listener into webview:", err);
+    });
+  });
+}
+
 function showTab(tabId) {
-  document.querySelectorAll("webview").forEach(w => w.classList.remove("active"));
-  const activeWebview = document.getElementById(tabId);
-  if (activeWebview) {
-    activeWebview.classList.add("active");
-    document.body.setAttribute("data-current-tab", tabId);
-    console.log(`[Renderer] Switched to tab: ${tabId}`);
-  } else {
-    console.warn(`[Renderer] Webview not found for tab ID: ${tabId}`);
+  if (currentTabId === tabId) {
+    console.log(`[Renderer] Tab ${tabId} already active.`);
+    return;
   }
 
+  // 1. Destruir a webview ativa atual (se houver)
+  if (activeWebview) {
+    console.log(`[Renderer] Destroying previous webview: ${currentTabId}`);
+    activeWebview.remove();
+    activeWebview = null;
+  }
+
+  // 2. Criar a nova webview
+  const config = tabConfigs[tabId];
+  if (!config) {
+    console.warn(`[Renderer] Configuration not found for tab ID: ${tabId}`);
+    return;
+  }
+
+  const webview = document.createElement("webview");
+  webview.id = tabId;
+  webview.src = config.url;
+  webview.partition = config.partition;
+  webview.setAttribute("allowpopups", "");
+  webview.classList.add("active");
+
+  // 3. Anexar listeners
+  attachWebviewListeners(webview);
+
+  // Configurações de segurança e contexto de menu (anteriormente no main.js)
+  webview.addEventListener('dom-ready', () => {
+    // Habilitar verificação ortográfica
+    webview.setSpellCheckerLanguages(['pt-BR']);
+    webview.setSpellCheckerEnabled(true);
+
+    // Configurar User-Agent personalizado APENAS para Grok
+    webview.addEventListener('did-start-navigation', (_event, url) => {
+      if (url.includes('grok.com') || url.includes('x.ai')) {
+        // Acessar o processo principal via IPC para obter o user-agent
+        window.electronAPI.app.getGrokUserAgent().then(grokUserAgent => {
+          webview.setUserAgent(grokUserAgent);
+          console.log(`[Renderer] User-Agent personalizado aplicado para Grok: ${url}`);
+        });
+      }
+    });
+
+    // Configurar menu de contexto para webviews
+    webview.addEventListener('context-menu', (_event, params) => {
+      // O menu de contexto precisa ser criado no processo principal
+      // Vamos enviar um IPC para o processo principal para mostrar o menu
+      window.electronAPI.app.showWebviewContextMenu(params);
+    });
+  });
+
+  // 4. Adicionar ao DOM
+  const container = document.getElementById("webview-container");
+  if (container) {
+    container.appendChild(webview);
+    activeWebview = webview;
+    currentTabId = tabId;
+    document.body.setAttribute("data-current-tab", tabId);
+    console.log(`[Renderer] Created and switched to tab: ${tabId}`);
+  } else {
+    console.error("[Renderer] Webview container not found.");
+    return;
+  }
+
+  // 5. Atualizar botões da barra lateral
   document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active-button"));
   const activeBtn = document.getElementById(`btn-${tabId}`);
   if (activeBtn) {
@@ -125,18 +240,7 @@ function showTab(tabId) {
 
 // Função para obter a webview ativa
 function getActiveWebview() {
-  const currentTabId = document.body.getAttribute("data-current-tab");
-  if (currentTabId) {
-    const webview = document.getElementById(currentTabId);
-    if (webview) {
-      return webview;
-    } else {
-      console.error(`[Renderer] Active webview element not found for ID: ${currentTabId}`);
-    }
-  } else {
-    console.warn("[Renderer] No current tab ID found in body attribute.");
-  }
-  return null;
+  return activeWebview;
 }
 
 // --- Funções de Busca na Página ---
@@ -279,6 +383,13 @@ document.addEventListener("click", (e) => {
   }
 });
 
+// Listener para fechar o menu de contexto da aba ao clicar em qualquer lugar
+document.addEventListener("contextmenu", (e) => {
+  if (!e.target.closest("#tab-context-menu")) {
+    hideTabContextMenu();
+  }
+});
+
 // --- Inicialização --- 
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("[Renderer] DOMContentLoaded event fired.");
@@ -332,6 +443,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (firstTabButton) {
     const firstTabId = firstTabButton.id.replace("btn-", "");
     console.log(`[Renderer] Showing initial tab: ${firstTabId}`);
+    // A primeira aba deve ser mostrada sem verificar currentTabId, então forçamos a criação
+    currentTabId = null; // Garante que showTab será executado
     showTab(firstTabId);
   } else {
     console.warn("[Renderer] No initial tab found.");
@@ -397,52 +510,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     closeFindBarBtn.addEventListener("click", hideFindBar);
   }
 
-  // --- Configura Listeners para Eventos de Busca na Webview ---
-  document.querySelectorAll("webview").forEach(webview => {
-    webview.addEventListener("found-in-page", (e) => {
-      const { activeMatchOrdinal, matches } = e.result;
-      console.log(`[Renderer] Found in page: match ${activeMatchOrdinal} of ${matches}`);
-      updateFindResults(activeMatchOrdinal, matches);
-    });
 
-    // Adiciona listeners para fechar menus ao interagir com webviews
-    webview.addEventListener("focus", () => {
-      console.log("[Renderer] Webview focus event - hiding menus");
-      hideAllMenus();
-      hideTabContextMenu();
-    });
-
-    // Captura cliques no webview para fechar menus
-    webview.addEventListener("mousedown", () => {
-      console.log("[Renderer] Webview mousedown event - hiding menus");
-      hideAllMenus();
-      hideTabContextMenu();
-    });
-
-    // Captura quando o webview começa a ser usado
-    webview.addEventListener("dom-ready", () => {
-      // Adiciona um listener para eventos dentro do webview
-      webview.addEventListener("ipc-message", (event) => {
-        if (event.channel === "webview-clicked") {
-          console.log("[Renderer] Received click event from webview - hiding menus");
-          hideAllMenus();
-          hideTabContextMenu();
-        }
-      });
-
-      // Injeta script para capturar cliques dentro do webview
-      webview.executeJavaScript(`
-        document.addEventListener('click', () => {
-          if (window.ipcRenderer) {
-            window.ipcRenderer.sendToHost('webview-clicked');
-          }
-        });
-        true; // Retorno necessário para executeJavaScript
-      `).catch(err => {
-        console.warn("[Renderer] Failed to inject click listener into webview:", err);
-      });
-    });
-  });
 });
 
 // Recebe configurações iniciais do processo principal
