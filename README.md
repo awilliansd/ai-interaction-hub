@@ -83,13 +83,9 @@
 - **ESC:** Fecha modais e menus abertos
 - **Botão direito:** Abre menu de contexto nas abas
 
-Chat GPT
-![Chat GPT](assets/images/Screenshot1.png)
+Gemini
+![Gemini](assets/images/Screenshot1.png)
 
-Claude
-
-
-![Claude](assets/images/Screenshot2.png)
 
 
 ## Futuras Melhorias
