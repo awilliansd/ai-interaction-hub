@@ -84,7 +84,7 @@
 - **Botão direito:** Abre menu de contexto nas abas
 
 Gemini
-![Gemini](assets/images/Screenshot1.png)
+![Gemini](assets/images/gemini.png)
 
 
 
