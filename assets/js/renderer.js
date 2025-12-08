@@ -14,7 +14,7 @@ const tabConfigs = {
 // Mapa para rastrear as webviews ativas (apenas a ativa estará aqui)
 let activeWebview = null;
 let currentTabId = null;
-let keepTabsActive = false; // Nova variável de estado para a configuração
+let keepTabsActive = localStorage.getItem("keepTabsActive") === "true"; // Inicializa com valor do localStorage
 
 // Estado da busca
 
@@ -493,10 +493,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     menu.setAttribute("role", "menubar");
   }
 
-  // Carrega estado inicial do 'keepTabsActive'
-  const savedKeepActiveState = localStorage.getItem("keepTabsActive");
-  // O padrão é false (otimizado), a menos que o localStorage diga 'true'
-  keepTabsActive = savedKeepActiveState === "true";
+  // A variável keepTabsActive já foi inicializada no escopo global.
   const keepActiveCheckbox = document.getElementById("keep-tabs-active");
   if (keepActiveCheckbox) {
     keepActiveCheckbox.checked = keepTabsActive;
