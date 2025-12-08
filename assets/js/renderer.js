@@ -14,6 +14,7 @@ const tabConfigs = {
 // Mapa para rastrear as webviews ativas (apenas a ativa estará aqui)
 let activeWebview = null;
 let currentTabId = null;
+let keepTabsActive = false; // Nova variável de estado para a configuração
 
 // Estado da busca
 
@@ -66,8 +67,10 @@ function showSettings() {
   const modal = document.getElementById("settings-modal");
   if (modal) {
     modal.style.display = "block";
-    const checkbox = document.getElementById("minimize-to-tray");
-    if (checkbox) checkbox.checked = minimizeToTray;
+    const minimizeCheckbox = document.getElementById("minimize-to-tray");
+    if (minimizeCheckbox) minimizeCheckbox.checked = minimizeToTray;
+    const keepActiveCheckbox = document.getElementById("keep-tabs-active");
+    if (keepActiveCheckbox) keepActiveCheckbox.checked = keepTabsActive;
   }
   hideAllMenus();
 }
@@ -84,6 +87,15 @@ function toggleMinimizeToTray() {
   minimizeToTray = checkbox.checked;
   localStorage.setItem("minimizeToTray", minimizeToTray.toString());
   window.electronAPI.settings.setMinimizeToTray(minimizeToTray);
+}
+
+function toggleKeepTabsActive() {
+  const checkbox = document.getElementById("keep-tabs-active");
+  keepTabsActive = checkbox.checked;
+  localStorage.setItem("keepTabsActive", keepTabsActive.toString());
+  window.electronAPI.settings.setKeepTabsActive(keepTabsActive);
+  // Recarrega a aplicação para aplicar a mudança de modo
+  window.location.reload();
 }
 
 // Funções de contexto das abas (HTML)
@@ -168,69 +180,94 @@ function showTab(tabId) {
     return;
   }
 
-  // 1. Destruir a webview ativa atual (se houver)
-  if (activeWebview) {
-    console.log(`[Renderer] Destroying previous webview: ${currentTabId}`);
-    activeWebview.remove();
-    activeWebview = null;
+  // 1. Esconder a webview ativa atual (se houver)
+  if (currentTabId) {
+    const prevWebview = document.getElementById(currentTabId);
+    if (prevWebview) {
+      prevWebview.classList.remove("active");
+    }
   }
 
-  // 2. Criar a nova webview
-  const config = tabConfigs[tabId];
-  if (!config) {
-    console.warn(`[Renderer] Configuration not found for tab ID: ${tabId}`);
-    return;
-  }
+  // 2. Atualizar o estado da aba
+  currentTabId = tabId;
+  document.body.setAttribute("data-current-tab", tabId);
 
-  const webview = document.createElement("webview");
-  webview.id = tabId;
-  webview.src = config.url;
-  webview.partition = config.partition;
-  webview.setAttribute("allowpopups", "");
-  webview.classList.add("active");
-
-  // 3. Anexar listeners
-  attachWebviewListeners(webview);
-
-  // Configurações de segurança e contexto de menu (anteriormente no main.js)
-  webview.addEventListener('dom-ready', () => {
-    // Habilitar verificação ortográfica
-    webview.setSpellCheckerLanguages(['pt-BR']);
-    webview.setSpellCheckerEnabled(true);
-
-    // Configurar User-Agent personalizado APENAS para Grok
-    webview.addEventListener('did-start-navigation', (_event, url) => {
-      if (url.includes('grok.com') || url.includes('x.ai')) {
-        // Acessar o processo principal via IPC para obter o user-agent
-        window.electronAPI.app.getGrokUserAgent().then(grokUserAgent => {
-          webview.setUserAgent(grokUserAgent);
-          console.log(`[Renderer] User-Agent personalizado aplicado para Grok: ${url}`);
-        });
-      }
-    });
-
-    // Configurar menu de contexto para webviews
-    webview.addEventListener('context-menu', (_event, params) => {
-      // O menu de contexto precisa ser criado no processo principal
-      // Vamos enviar um IPC para o processo principal para mostrar o menu
-      window.electronAPI.app.showWebviewContextMenu(params);
-    });
-  });
-
-  // 4. Adicionar ao DOM
-  const container = document.getElementById("webview-container");
-  if (container) {
-    container.appendChild(webview);
-    activeWebview = webview;
-    currentTabId = tabId;
-    document.body.setAttribute("data-current-tab", tabId);
-    console.log(`[Renderer] Created and switched to tab: ${tabId}`);
+  // 3. Lógica de Alternância
+  if (keepTabsActive) {
+    // Modo de Alta Performance (Webviews Estáticas)
+    const nextWebview = document.getElementById(tabId);
+    if (nextWebview) {
+      nextWebview.classList.add("active");
+      activeWebview = nextWebview;
+      console.log(`[Renderer] Switched to static tab: ${tabId}`);
+    } else {
+      console.error(`[Renderer] Static webview element not found for ID: ${tabId}`);
+    }
   } else {
-    console.error("[Renderer] Webview container not found.");
-    return;
+    // Modo Otimizado (Webviews Dinâmicas - Criação/Destruição)
+
+    // Destruir a webview ativa atual (se houver)
+    if (activeWebview) {
+      console.log(`[Renderer] Destroying previous webview: ${currentTabId}`);
+      activeWebview.remove();
+      activeWebview = null;
+    }
+
+    // Criar a nova webview
+    const config = tabConfigs[tabId];
+    if (!config) {
+      console.warn(`[Renderer] Configuration not found for tab ID: ${tabId}`);
+      return;
+    }
+
+    const webview = document.createElement("webview");
+    webview.id = tabId;
+    webview.src = config.url;
+    webview.partition = config.partition;
+    webview.setAttribute("allowpopups", "");
+    webview.classList.add("active");
+
+    // Anexar listeners
+    attachWebviewListeners(webview);
+
+    // Configurações de segurança e contexto de menu (anteriormente no main.js)
+    webview.addEventListener('dom-ready', () => {
+      // Habilitar verificação ortográfica
+      webview.setSpellCheckerLanguages(['pt-BR']);
+      webview.setSpellCheckerEnabled(true);
+
+      // Configurar User-Agent personalizado APENAS para Grok
+      webview.addEventListener('did-start-navigation', (_event, url) => {
+        if (url.includes('grok.com') || url.includes('x.ai')) {
+          // Acessar o processo principal via IPC para obter o user-agent
+          window.electronAPI.app.getGrokUserAgent().then(grokUserAgent => {
+            webview.setUserAgent(grokUserAgent);
+            console.log(`[Renderer] User-Agent personalizado aplicado para Grok: ${url}`);
+          });
+        }
+      });
+
+      // Configurar menu de contexto para webviews
+      webview.addEventListener('context-menu', (_event, params) => {
+        // O menu de contexto precisa ser criado no processo principal
+        // Vamos enviar um IPC para o processo principal para mostrar o menu
+        window.electronAPI.app.showWebviewContextMenu(params);
+      });
+    });
+
+    // Adicionar ao DOM
+    const container = document.getElementById("webview-container");
+    if (container) {
+      container.appendChild(webview);
+      activeWebview = webview;
+      console.log(`[Renderer] Created and switched to dynamic tab: ${tabId}`);
+    } else {
+      console.error("[Renderer] Webview container not found.");
+      return;
+    }
   }
 
-  // 5. Atualizar botões da barra lateral
+  // 4. Atualizar botões da barra lateral
   document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active-button"));
   const activeBtn = document.getElementById(`btn-${tabId}`);
   if (activeBtn) {
@@ -239,8 +276,26 @@ function showTab(tabId) {
 }
 
 // Função para obter a webview ativa
+// Função para obter a webview ativa
 function getActiveWebview() {
-  return activeWebview;
+  if (keepTabsActive) {
+    // Modo de Alta Performance: Webviews estáticas no DOM
+    const currentTabId = document.body.getAttribute("data-current-tab");
+    if (currentTabId) {
+      const webview = document.getElementById(currentTabId);
+      if (webview) {
+        return webview;
+      } else {
+        console.error(`[Renderer] Active webview element not found for ID: ${currentTabId}`);
+      }
+    } else {
+      console.warn("[Renderer] No current tab ID found in body attribute.");
+    }
+    return null;
+  } else {
+    // Modo Otimizado: Webview dinâmica
+    return activeWebview;
+  }
 }
 
 // --- Funções de Busca na Página ---
@@ -438,6 +493,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     menu.setAttribute("role", "menubar");
   }
 
+  // Carrega estado inicial do 'keepTabsActive'
+  const savedKeepActiveState = localStorage.getItem("keepTabsActive");
+  // O padrão é false (otimizado), a menos que o localStorage diga 'true'
+  keepTabsActive = savedKeepActiveState === "true";
+  const keepActiveCheckbox = document.getElementById("keep-tabs-active");
+  if (keepActiveCheckbox) {
+    keepActiveCheckbox.checked = keepTabsActive;
+    console.log(`[Renderer] Initial keepTabsActive state set from localStorage: ${keepTabsActive}`);
+  }
+
+  // Se estiver no modo otimizado, remove as webviews estáticas do DOM para evitar carregamento
+  if (!keepTabsActive) {
+    document.querySelectorAll("#webview-container webview").forEach(webview => {
+      webview.remove();
+    });
+    console.log("[Renderer] Removed static webviews from DOM (Optimized Mode).");
+  }
+
   // Mostra a primeira aba
   const firstTabButton = document.querySelector("#sidebar .sidebar-top button");
   if (firstTabButton) {
@@ -516,11 +589,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 // Recebe configurações iniciais do processo principal
 window.electronAPI.settings.onInit((settings) => {
   console.log("[Renderer] Initial settings received from main process:", settings);
+  
+  // Configuração minimizeToTray
   minimizeToTray = settings.minimizeToTray ?? false;
-  const checkbox = document.getElementById("minimize-to-tray");
-  if (checkbox) {
-    checkbox.checked = minimizeToTray;
+  const minimizeCheckbox = document.getElementById("minimize-to-tray");
+  if (minimizeCheckbox) {
+    minimizeCheckbox.checked = minimizeToTray;
     localStorage.setItem("minimizeToTray", minimizeToTray.toString());
     console.log(`[Renderer] minimizeToTray checkbox updated from main process settings: ${minimizeToTray}`);
+  }
+
+  // Configuração keepTabsActive
+  keepTabsActive = settings.keepTabsActive ?? false;
+  const keepActiveCheckbox = document.getElementById("keep-tabs-active");
+  if (keepActiveCheckbox) {
+    keepActiveCheckbox.checked = keepTabsActive;
+    localStorage.setItem("keepTabsActive", keepTabsActive.toString());
+    console.log(`[Renderer] keepTabsActive checkbox updated from main process settings: ${keepTabsActive}`);
   }
 });
