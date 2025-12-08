@@ -24,11 +24,11 @@ describe('settingsManager', () => {
       // Acessar a variável interna para teste é complexo, então vamos testar o efeito
       // indireto: salvar algo deve usar o caminho certo.
       const expectedPath = path.join(mockApp.getPath('userData'), 'settings.json');
-      
+
       // Tentativa de salvar para verificar se o caminho foi usado
       fs.writeFileSync.mockClear(); // Limpa chamadas anteriores
       settingsManager.saveSettings({ test: 'data' });
-      
+
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         expectedPath,
         expect.any(String),
@@ -62,15 +62,26 @@ describe('settingsManager', () => {
       fs.existsSync.mockReturnValue(false);
 
       const loadedSettings = settingsManager.loadSettings();
-      expect(loadedSettings).toEqual({ minimizeToTray: false });
+      expect(loadedSettings).toEqual({ minimizeToTray: false, keepTabsActive: false });
     });
 
     it('deve retornar as configurações padrão se ocorrer um erro de parse', () => {
+      // 1. Criar um spy e silenciar o console.error original
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
+
       fs.existsSync.mockReturnValue(true);
       fs.readFileSync.mockReturnValue('{"invalid json"');
 
       const loadedSettings = settingsManager.loadSettings();
-      expect(loadedSettings).toEqual({ minimizeToTray: false });
+
+      // Você pode até verificar se o console.error foi chamado
+      expect(consoleErrorSpy).toHaveBeenCalled();
+
+      // 2. Restaurar a função console.error original após o teste
+      consoleErrorSpy.mockRestore();
+
+      // Lembre-se de usar a correção do objeto padrão aqui também:
+      expect(loadedSettings).toEqual({ minimizeToTray: false, keepTabsActive: false });
     });
   });
 
@@ -82,7 +93,7 @@ describe('settingsManager', () => {
     it('deve salvar as configurações no arquivo correto', () => {
       const settings = { minimizeToTray: true, anotherSetting: 'value' };
       const expectedPath = path.join(mockApp.getPath('userData'), 'settings.json');
-      
+
       settingsManager.saveSettings(settings);
 
       expect(fs.writeFileSync).toHaveBeenCalledWith(

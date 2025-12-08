@@ -32,6 +32,14 @@
         <p class="setting-description">Quando ativado, fechar a janela manterá o aplicativo em execução na bandeja.</p>
       </div>
       <div class="setting-item">
+        <label class="setting-label">
+          <input type="checkbox" id="keep-tabs-active" onchange="toggleKeepTabsActive()">
+          <span class="checkmark"></span>
+          Manter Abas Ativas (Modo de Alta Performance)
+        </label>
+        <p class="setting-description">Prioriza a velocidade de troca de abas em detrimento do consumo de memória RAM. Desativado por padrão para otimização de memória.</p>
+      </div>
+      <div class="setting-item">
         <h3>Comandos de ajuda</h3>
         <p class="shortcut-info"><strong>Botão direito:</strong> Menu de contexto nas abas</p>
         <p class="shortcut-info"><strong>CTRL+R:</strong> Recarregar aba</p>
@@ -102,18 +110,18 @@
       </div>
     </div>
 
-    <div id="webview-container">
+     <div id="webview-container">
       <!-- Adicionado 'allowpopups' a todas as webviews -->
-
-
-
-
-
-
-
-
-
-    </div>
+      <webview id="gemini" src="https://gemini.google.com/app" partition="persist:gemini" allowpopups></webview>
+      <webview id="chatgpt" src="https://chat.openai.com" partition="persist:chatgpt" allowpopups></webview>
+      <webview id="claude" src="https://claude.ai" partition="persist:claude" allowpopups></webview>
+      <webview id="deepseek" src="https://chat.deepseek.com" partition="persist:deepseek" allowpopups></webview>
+      <webview id="grok" src="https://grok.com" partition="persist:grok" allowpopups></webview>
+      <webview id="manus" src="https://manus.im/app" partition="persist:manus" allowpopups></webview>
+      <webview id="copilot" src="https://copilot.microsoft.com" partition="persist:copilot" allowpopups></webview>
+      <webview id="metaai" src="https://www.meta.ai" partition="persist:metaai" allowpopups></webview>
+      <webview id="perplexity" src="https://www.perplexity.ai" partition="persist:perplexity" allowpopups></webview>
+    </div></div>
 
     <!-- Menu de Contexto Genérico (parece não usado) -->
     <div id="context-menu" style="display: none; position: absolute; z-index: 1000;" class="context-menu">

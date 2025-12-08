@@ -20,7 +20,7 @@ function loadSettings() {
   if (!settingsPath) {
     console.error("SettingsManager: Módulo não inicializado. Chame initialize(app) primeiro.");
     // Retorna um objeto de configurações padrão ou lança um erro
-    return { minimizeToTray: false }; // Retorno padrão como no código original
+    return { minimizeToTray: false, keepTabsActive: false }; // Retorno padrão com nova configuração
   }
   try {
     // Verifica se o arquivo existe antes de tentar ler
@@ -30,12 +30,12 @@ function loadSettings() {
     } else {
       // Se o arquivo não existe, retorna as configurações padrão
       console.log("Arquivo de configurações não encontrado, retornando padrão.");
-      return { minimizeToTray: false };
+      return { minimizeToTray: false, keepTabsActive: false };
     }
   } catch (error) {
     console.error("Erro ao carregar configurações:", error);
     // Em caso de erro (ex: JSON inválido), retorna as configurações padrão
-    return { minimizeToTray: false };
+    return { minimizeToTray: false, keepTabsActive: false };
   }
 }
 

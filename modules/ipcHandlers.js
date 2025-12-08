@@ -48,6 +48,14 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     // Notificar outros módulos se necessário (ex: appLifecycle para lógica de fechar)
   });
 
+  // Definir se mantém as abas ativas (modo de alta performance)
+  ipcMain.on("set-keep-tabs-active", (event, value) => {
+    const currentSettings = settingsManager.loadSettings();
+    currentSettings.keepTabsActive = value;
+    settingsManager.saveSettings(currentSettings);
+    console.log(`Configuração 'keepTabsActive' salva como: ${value}`);
+  });
+
   // Fechar a aplicação (alternativa a 'exit-app')
   ipcMain.on("app:close", () => {
     const appLifecycle = require("./appLifecycle");

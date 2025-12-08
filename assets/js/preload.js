@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Funções relacionadas às configurações
   settings: {
     setMinimizeToTray: (value) => ipcRenderer.send("set-minimize-to-tray", value),
+    setKeepTabsActive: (value) => ipcRenderer.send("set-keep-tabs-active", value),
     onInit: (callback) => ipcRenderer.on("init-settings", (event, settings) => callback(settings)),
   },
   // Funções relacionadas a links externos
