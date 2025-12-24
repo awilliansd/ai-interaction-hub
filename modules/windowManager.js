@@ -20,9 +20,18 @@ function createWindow(app, settings) {
     throw new Error("WindowManager: Instância do 'app' do Electron é necessária.");
   }
 
+  // Escolhe o ícone apropriado conforme empacotamento
+  let windowIconPath;
+  if (app.isPackaged) {
+    windowIconPath = path.join(process.resourcesPath, 'icons', 'hicolor', '512x512', 'apps', 'aiinteractionhub.png');
+  } else {
+    windowIconPath = path.join(app.getAppPath(), 'icons', 'app.png');
+  }
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    title: "AI Interaction Hub",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -30,7 +39,7 @@ function createWindow(app, settings) {
       webviewTag: true,
       spellcheck: true // Habilita verificação ortográfica globalmente
     },
-    icon: path.join(app.getAppPath(), "icons", "app.png")
+    icon: windowIconPath
   });
 
   mainWindow.loadFile(path.join(app.getAppPath(), "index.html"));
