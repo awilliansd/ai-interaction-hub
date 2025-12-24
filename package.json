@@ -19,6 +19,10 @@
     "win": {
       "target": "nsis",
       "icon": "icons/app.ico"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "icons/app.png"
     }
   }
 }
