@@ -1,6 +1,6 @@
 {
   "name": "ai-interaction-hub",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "description": "Hub unificado para múltiplos chats de IA",
   "author": "Alessandro Willian",
   "main": "main.js",
@@ -25,7 +25,10 @@
       "icon": "icons/app.ico"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "icons/hicolor/512x512/apps/aiinteractionhub.png",
       "category": "Network",
       "desktop": {
@@ -36,11 +39,18 @@
       "executableName": "ai-interaction-hub",
       "maintainer": "Alessandro Willian <noreply@aiinteractionhub.local>"
     },
+    "files": [
+      "**/*",
+      "!dist/",
+      "!node_modules/"
+    ],
     "extraResources": [
       {
         "from": "icons",
         "to": "icons",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ]
   }

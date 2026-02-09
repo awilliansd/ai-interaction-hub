@@ -130,6 +130,16 @@ function reloadCurrentTab() {
   }
 }
 
+function clearAppCache() {
+  if (confirm("Isso irá limpar todo o cache e dados de navegação (incluindo logins) e reiniciar a aplicação. Deseja continuar?")) {
+    window.electronAPI.app.clearCache();
+  }
+}
+
+function handleReloadActiveTab() {
+  reloadCurrentTab();
+}
+
 // Funções de gerenciamento de abas
 
 // Função para anexar todos os listeners necessários a uma nova webview
@@ -229,6 +239,24 @@ function showTab(tabId) {
 
     // Anexar listeners
     attachWebviewListeners(webview);
+
+    // Tratamento de falhas de carregamento e erros de rede
+    webview.addEventListener('did-fail-load', (e) => {
+      console.error(`[Renderer] Webview ${tabId} failed to load:`, e.errorCode, e.errorDescription);
+      // Erros comuns: -105 (DNS), -106 (Internet), -3 (Cancelado)
+      if (tabId === 'gemini' && ![ -3, -105, -106 ].includes(e.errorCode)) {
+        console.log("[Renderer] Attempting to recover Gemini from load failure...");
+        setTimeout(() => webview.reload(), 3000);
+      }
+    });
+
+    // Capturar erros de console que podem indicar o erro "Algo deu errado"
+    webview.addEventListener('console-message', (e) => {
+      if (tabId === 'gemini' && e.message.includes('Something went wrong')) {
+        console.warn("[Renderer] Gemini reported internal error. Refreshing...");
+        setTimeout(() => webview.reload(), 1000);
+      }
+    });
 
     // Configurações de segurança e contexto de menu (anteriormente no main.js)
     webview.addEventListener('dom-ready', () => {
