@@ -15,14 +15,8 @@ function createTray(app, mainWindow, settingsManager) {
   }
 
     // Escolhe o ícone correto dependendo se a app está empacotada
-    let iconPath;
-    if (app.isPackaged) {
-    // Quando empacotado, os ícones gerados devem estar em process.resourcesPath/icons/hicolor/.../apps
-    iconPath = path.join(process.resourcesPath, "icons", "hicolor", "512x512", "apps", "aiinteractionhub.png");
-    } else {
-    // Em desenvolvimento, usa o ícone local
-    iconPath = path.join(app.getAppPath(), "icons", "app.png");
-    }
+    // Usar o ícone da raiz do projeto garante melhor compatibilidade com transparência
+    const iconPath = path.join(app.getAppPath(), "icons", "app.png");
 
     try {
       tray = new Tray(iconPath);
