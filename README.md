@@ -1,7 +1,7 @@
 # AI Interaction Hub
 
 <p align="center">
-  <img src="icons/aiinteractionhub-dark.png" alt="Descrição da imagem">
+  <img src="icons/aiinteractionhub-dark.png" alt="Descrição da imagem" width="200">
 </p>
 
 **AI Interaction Hub** é um aplicativo desktop que reúne, em uma única interface, os principais assistentes de IA do mercado, facilitando o acesso e a organização das suas conversas.
