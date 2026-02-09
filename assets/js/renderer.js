@@ -240,12 +240,21 @@ function showTab(tabId) {
     // Anexar listeners
     attachWebviewListeners(webview);
 
-    // Tratamento de falhas de carregamento
+    // Tratamento de falhas de carregamento e erros de rede
     webview.addEventListener('did-fail-load', (e) => {
       console.error(`[Renderer] Webview ${tabId} failed to load:`, e.errorCode, e.errorDescription);
-      if (tabId === 'gemini' && e.errorCode !== -3) { // -3 é cancelado (comum em redirecionamentos)
-        console.log("[Renderer] Attempting to recover Gemini...");
-        setTimeout(() => webview.reload(), 2000);
+      // Erros comuns: -105 (DNS), -106 (Internet), -3 (Cancelado)
+      if (tabId === 'gemini' && ![ -3, -105, -106 ].includes(e.errorCode)) {
+        console.log("[Renderer] Attempting to recover Gemini from load failure...");
+        setTimeout(() => webview.reload(), 3000);
+      }
+    });
+
+    // Capturar erros de console que podem indicar o erro "Algo deu errado"
+    webview.addEventListener('console-message', (e) => {
+      if (tabId === 'gemini' && e.message.includes('Something went wrong')) {
+        console.warn("[Renderer] Gemini reported internal error. Refreshing...");
+        setTimeout(() => webview.reload(), 1000);
       }
     });
 

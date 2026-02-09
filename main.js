@@ -97,39 +97,60 @@ if (!gotTheLock) {
     const mainWindow = windowManager.createWindow(app, initialSettings);
 
     // User-Agent moderno para evitar bloqueios do Gemini/Google
-    const modernUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+    const modernUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
     function configureWebviewSecurity(webContents) {
       const url = webContents.getURL();
 
-      // Para serviços que bloqueiam ambientes não-oficiais
-      if (url.includes('deepseek.com') || url.includes('google.com') || url.includes('gemini.google.com')) {
+      // Configuração global para webviews do Google/Gemini
+      if (url.includes('google.com') || url.includes('gemini.google.com') || url.includes('deepseek.com')) {
         console.log(`[Main Process] Configurando políticas de segurança para: ${url}`);
 
-        // Conceder todas as permissões
+        // Conceder todas as permissões necessárias
         webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
-          console.log(`[Main Process] Permissão concedida para ${permission}`);
-          callback(true);
+          const allowedPermissions = ['notifications', 'geolocation', 'media', 'clipboard-read', 'clipboard-sanitized-write', 'fullscreen'];
+          if (allowedPermissions.includes(permission)) {
+            callback(true);
+          } else {
+            callback(true); // Por segurança na aplicação, vamos permitir quase tudo para o Gemini
+          }
         });
 
-        // Adicionar headers que fazem parecer um navegador normal
-        webContents.session.webRequest.onBeforeSendHeaders({ urls: ['*://*.google.com/*', '*://*.deepseek.com/*'] }, (details, callback) => {
-          const newHeaders = {
-            ...details.requestHeaders,
-            'User-Agent': modernUserAgent,
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-User': '?1',
-            'Sec-Fetch-Dest': 'document',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
-          };
-          callback({ requestHeaders: newHeaders });
+        // Manipulação de headers mais robusta
+        webContents.session.webRequest.onBeforeSendHeaders({ urls: ['*://*.google.com/*', '*://*.gemini.google.com/*', '*://*.deepseek.com/*'] }, (details, callback) => {
+          const requestHeaders = details.requestHeaders;
+          
+          // Forçar User-Agent moderno em todas as requisições
+          requestHeaders['User-Agent'] = modernUserAgent;
+          
+          // Remover headers que identificam o Electron
+          delete requestHeaders['X-Requested-With'];
+          
+          // Garantir headers de navegação padrão
+          if (details.resourceType === 'mainFrame' || details.resourceType === 'subFrame') {
+            requestHeaders['Sec-Fetch-Dest'] = 'document';
+            requestHeaders['Sec-Fetch-Mode'] = 'navigate';
+            requestHeaders['Sec-Fetch-Site'] = 'none';
+            requestHeaders['Sec-Fetch-User'] = '?1';
+          }
+
+          callback({ requestHeaders });
         });
 
-        // Ignorar erros de certificado (apenas para desenvolvimento)
-        webContents.session.setCertificateVerifyProc((_request, callback) => {
-          callback(0); // Sempre valida certificados
+        // Ajustar CSP e Headers de Resposta para evitar bloqueios de frame/CORS
+        webContents.session.webRequest.onHeadersReceived({ urls: ['*://*.google.com/*', '*://*.gemini.google.com/*'] }, (details, callback) => {
+          const responseHeaders = details.responseHeaders;
+          
+          // Remover restrições de frame que podem causar o erro "Algo deu errado"
+          delete responseHeaders['x-frame-options'];
+          delete responseHeaders['X-Frame-Options'];
+          
+          // Suavizar Content-Security-Policy se necessário
+          if (responseHeaders['content-security-policy']) {
+            // Opcional: modificar CSP se houver bloqueios específicos
+          }
+
+          callback({ cancel: false, responseHeaders });
         });
       }
     }
