@@ -22,8 +22,7 @@
     "productName": "AI Interaction Hub",
     "win": {
       "target": "nsis",
-      "icon": "icons/app.ico",
-      "signAndEditExecutable": false
+      "icon": "icons/app.ico"
     },
     "linux": {
       "target": [

@@ -21,8 +21,12 @@ function createWindow(app, settings) {
   }
 
   // Escolhe o ícone apropriado conforme empacotamento
-  // Usar o ícone da raiz do projeto garante melhor compatibilidade com transparência
-  const windowIconPath = path.join(app.getAppPath(), 'icons', 'app.png');
+  let windowIconPath;
+  if (app.isPackaged) {
+    windowIconPath = path.join(process.resourcesPath, 'icons', 'hicolor', '512x512', 'apps', 'aiinteractionhub.png');
+  } else {
+    windowIconPath = path.join(app.getAppPath(), 'icons', 'app.png');
+  }
 
   mainWindow = new BrowserWindow({
     width: 1200,
