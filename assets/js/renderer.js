@@ -130,6 +130,16 @@ function reloadCurrentTab() {
   }
 }
 
+function clearAppCache() {
+  if (confirm("Isso irá limpar todo o cache e dados de navegação (incluindo logins) e reiniciar a aplicação. Deseja continuar?")) {
+    window.electronAPI.app.clearCache();
+  }
+}
+
+function handleReloadActiveTab() {
+  reloadCurrentTab();
+}
+
 // Funções de gerenciamento de abas
 
 // Função para anexar todos os listeners necessários a uma nova webview
@@ -229,6 +239,15 @@ function showTab(tabId) {
 
     // Anexar listeners
     attachWebviewListeners(webview);
+
+    // Tratamento de falhas de carregamento
+    webview.addEventListener('did-fail-load', (e) => {
+      console.error(`[Renderer] Webview ${tabId} failed to load:`, e.errorCode, e.errorDescription);
+      if (tabId === 'gemini' && e.errorCode !== -3) { // -3 é cancelado (comum em redirecionamentos)
+        console.log("[Renderer] Attempting to recover Gemini...");
+        setTimeout(() => webview.reload(), 2000);
+      }
+    });
 
     // Configurações de segurança e contexto de menu (anteriormente no main.js)
     webview.addEventListener('dom-ready', () => {

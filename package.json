@@ -12,7 +12,7 @@
     "test": "jest"
   },
   "devDependencies": {
-    "electron": "^39.2.5",
+    "electron": "^39.5.1",
     "electron-builder": "^26.0.12",
     "jest": "^30.2.0",
     "sharp": "^0.32.1"
@@ -25,7 +25,10 @@
       "icon": "icons/app.ico"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "icons/hicolor/512x512/apps/aiinteractionhub.png",
       "category": "Network",
       "desktop": {
@@ -40,7 +43,9 @@
       {
         "from": "icons",
         "to": "icons",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ]
   }

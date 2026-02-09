@@ -96,6 +96,9 @@ if (!gotTheLock) {
     // Cria a janela principal
     const mainWindow = windowManager.createWindow(app, initialSettings);
 
+    // User-Agent moderno para evitar bloqueios do Gemini/Google
+    const modernUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
     function configureWebviewSecurity(webContents) {
       const url = webContents.getURL();
 
@@ -110,9 +113,10 @@ if (!gotTheLock) {
         });
 
         // Adicionar headers que fazem parecer um navegador normal
-        webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+        webContents.session.webRequest.onBeforeSendHeaders({ urls: ['*://*.google.com/*', '*://*.deepseek.com/*'] }, (details, callback) => {
           const newHeaders = {
             ...details.requestHeaders,
+            'User-Agent': modernUserAgent,
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-User': '?1',
@@ -130,17 +134,19 @@ if (!gotTheLock) {
       }
     }
 
-    // NOTA: O listener 'did-attach-webview' foi removido, pois as webviews são criadas e destruídas
-    // dinamicamente no processo de renderização para otimização de memória.
-    // As configurações de segurança e contexto de menu devem ser aplicadas
-    // diretamente na webview no processo de renderização, se necessário,
-    // ou o código deve ser adaptado para usar o webContents da janela principal
-    // para configurações globais.
-
-    // Mantendo a função configureWebviewSecurity, caso seja útil para a janela principal
-    // ou se for necessário reintroduzir a lógica de webview.
-    // Por enquanto, o código de segurança e menu de contexto específico de webview
-    // foi removido do processo principal.
+    // Reativado did-attach-webview para garantir que webviews dinâmicas recebam as configurações
+    app.on('web-contents-created', (event, contents) => {
+      if (contents.getType() === 'webview') {
+        contents.on('did-finish-load', () => {
+          configureWebviewSecurity(contents);
+        });
+        
+        // Aplica imediatamente se já tiver URL
+        if (contents.getURL()) {
+          configureWebviewSecurity(contents);
+        }
+      }
+    });
 
     // Adiciona o manipulador de evento 'close'
     mainWindow.on("close", (event) => {
