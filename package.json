@@ -1,6 +1,6 @@
 {
   "name": "ai-interaction-hub",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "description": "Hub unificado para múltiplos chats de IA",
   "author": "Alessandro Willian",
   "main": "main.js",
@@ -22,7 +22,8 @@
     "productName": "AI Interaction Hub",
     "win": {
       "target": "nsis",
-      "icon": "icons/app.ico"
+      "icon": "icons/app.ico",
+      "signAndEditExecutable": false
     },
     "linux": {
       "target": ["AppImage", "deb"],
