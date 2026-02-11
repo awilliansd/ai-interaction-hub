@@ -15,6 +15,7 @@
   - DeepSeek
   - Grok
   - Manus
+  - Kimi
   - Microsoft Copilot
   - Meta AI
   - Perplexity
@@ -107,3 +108,4 @@ Este projeto está sob a licença MIT.
 
 **Desenvolvido por [Alessandro Willian](https://github.com/awilliansd)**  
 2025
+
