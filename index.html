@@ -88,6 +88,10 @@
         <button id="btn-manus" onclick="showTab('manus')" oncontextmenu="showTabContextMenu(event, 'manus')">
           <img src="assets/icons/manus.png" alt="Manus" width="32" height="32">
         </button>
+        <button id="btn-kimi" onclick="showTab('kimi')"
+          oncontextmenu="showTabContextMenu(event, 'kimi')">
+          <img src="assets/icons/kimi.png" alt="Kimi" width="32" height="32">
+        </button>
         <button id="btn-copilot" onclick="showTab('copilot')" oncontextmenu="showTabContextMenu(event, 'copilot')">
           <img src="assets/icons/mscopilot.png" alt="MS Copilot" width="32" height="32">
         </button>
@@ -126,6 +130,7 @@
       <webview id="copilot" src="https://copilot.microsoft.com" partition="persist:copilot" allowpopups></webview>
       <webview id="metaai" src="https://www.meta.ai" partition="persist:metaai" allowpopups></webview>
       <webview id="perplexity" src="https://www.perplexity.ai" partition="persist:perplexity" allowpopups></webview>
+      <webview id="kimi" src="https://www.kimi.com/" partition="persist:kimi" allowpopups></webview>
     </div></div>
 
     <!-- Menu de Contexto Genérico (parece não usado) -->
