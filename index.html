@@ -92,6 +92,10 @@
           oncontextmenu="showTabContextMenu(event, 'kimi')">
           <img src="assets/icons/kimi.png" alt="Kimi" width="32" height="32">
         </button>
+        <button id="btn-zai" onclick="showTab('zai')"
+          oncontextmenu="showTabContextMenu(event, 'zai')">
+          <img src="assets/icons/zai.svg" alt="Z.ai" width="32" height="32">
+        </button>
         <button id="btn-copilot" onclick="showTab('copilot')" oncontextmenu="showTabContextMenu(event, 'copilot')">
           <img src="assets/icons/mscopilot.png" alt="MS Copilot" width="32" height="32">
         </button>
@@ -131,6 +135,7 @@
       <webview id="metaai" src="https://www.meta.ai" partition="persist:metaai" allowpopups></webview>
       <webview id="perplexity" src="https://www.perplexity.ai" partition="persist:perplexity" allowpopups></webview>
       <webview id="kimi" src="https://www.kimi.com/" partition="persist:kimi" allowpopups></webview>
+      <webview id="zai" src="https://chat.z.ai/" partition="persist:zai" allowpopups></webview>
     </div></div>
 
     <!-- Menu de Contexto Genérico (parece não usado) -->

@@ -16,6 +16,7 @@
   - Grok
   - Manus
   - Kimi
+  - Z.ai
   - Microsoft Copilot
   - Meta AI
   - Perplexity

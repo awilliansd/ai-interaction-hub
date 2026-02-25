@@ -10,6 +10,7 @@ const tabConfigs = {
   metaai: { url: "https://www.meta.ai", partition: "persist:metaai" },
   perplexity: { url: "https://www.perplexity.ai", partition: "persist:perplexity" },
   kimi: { url: "https://www.kimi.com/", partition: "persist:kimi" },
+  zai: { url: "https://chat.z.ai/", partition: "persist:zai" },
 };
 
 // Mapa para rastrear as webviews ativas (apenas a ativa estará aqui)
