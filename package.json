@@ -1,6 +1,6 @@
 {
   "name": "ai-interaction-hub",
-  "version": "1.0.28",
+  "version": "1.0.29",
   "description": "Hub unificado para múltiplos chats de IA",
   "author": "Alessandro Willian",
   "main": "main.js",

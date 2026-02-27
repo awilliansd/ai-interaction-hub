@@ -173,6 +173,11 @@ function createWebviewElement(tabId) {
   webview.src = config.url;
   webview.partition = config.partition;
   webview.setAttribute("allowpopups", "");
+  if (tabId === "deepseek") {
+    const cleanUserAgent = navigator.userAgent.replace(/\sElectron\/[^\s]+/i, "");
+    webview.setAttribute("useragent", cleanUserAgent);
+    webview.setAttribute("preload", "./assets/js/deepseek-preload.js");
+  }
 
   attachWebviewListeners(webview);
   return webview;

@@ -8,6 +8,7 @@ const trayManager = require("./modules/trayManager");
 const ipcHandlers = require("./modules/ipcHandlers");
 const settingsManager = require("./modules/settingsManager");
 const appLifecycle = require("./modules/appLifecycle");
+const configuredWebviewSessions = new WeakSet();
 
 // --- Implementação do Single Instance Lock ---
 const gotTheLock = app.requestSingleInstanceLock();
@@ -31,6 +32,7 @@ if (!gotTheLock) {
   // Inicializa o ciclo de vida da aplicação
   const createWindowWithOptions = (settings) => windowManager.createWindow(app, settings);
   appLifecycle.initializeAppLifecycle(app, createWindowWithOptions, settingsManager);
+  const deepseekUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
 
   // Handler IPC para obter o User-Agent do Grok
   ipcMain.handle('get-grok-user-agent', () => {
@@ -91,6 +93,14 @@ if (!gotTheLock) {
         contents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
           callback(true); // Permitir permissões para WebViews
         });
+        if (!configuredWebviewSessions.has(contents.session)) {
+          contents.session.webRequest.onBeforeSendHeaders({ urls: ['*://*.deepseek.com/*'] }, (details, callback) => {
+            const requestHeaders = details.requestHeaders;
+            requestHeaders['User-Agent'] = deepseekUserAgent;
+            callback({ requestHeaders });
+          });
+          configuredWebviewSessions.add(contents.session);
+        }
       }
     });
 
