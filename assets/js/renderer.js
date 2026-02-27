@@ -173,12 +173,7 @@ function createWebviewElement(tabId) {
   webview.src = config.url;
   webview.partition = config.partition;
   webview.setAttribute("allowpopups", "");
-  
-  // Caminho absoluto para o script de preload de mascaramento
-  // Usamos o script que já criamos anteriormente
-  const preloadPath = `file://${window.location.pathname.split('/').slice(0, -2).join('/')}/js/webview-preload.js`;
-  webview.setAttribute("preload", "./assets/js/webview-preload.js");
-  
+
   attachWebviewListeners(webview);
   return webview;
 }

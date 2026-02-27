@@ -32,9 +32,6 @@ if (!gotTheLock) {
   const createWindowWithOptions = (settings) => windowManager.createWindow(app, settings);
   appLifecycle.initializeAppLifecycle(app, createWindowWithOptions, settingsManager);
 
-  // User-Agent moderno para Google/Gemini (simula Chrome real)
-  const googleUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
-  
   // Handler IPC para obter o User-Agent do Grok
   ipcMain.handle('get-grok-user-agent', () => {
     return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
@@ -78,10 +75,6 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     // Flags de linha de comando essenciais
     app.commandLine.appendSwitch('lang', 'pt-BR');
-    app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
-    
-    // Configura User-Agent global
-    app.userAgentFallback = googleUserAgent;
 
     // Intercepta e modifica o cabeçalho Accept-Language
     session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -97,21 +90,6 @@ if (!gotTheLock) {
       if (contents.getType() === 'webview') {
         contents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
           callback(true); // Permitir permissões para WebViews
-        });
-
-        // Manipulação de headers simplificada para evitar quebras
-        contents.session.webRequest.onBeforeSendHeaders({ urls: ['*://*.google.com/*', '*://*.gemini.google.com/*'] }, (details, callback) => {
-          const requestHeaders = details.requestHeaders;
-          requestHeaders['User-Agent'] = googleUserAgent;
-          delete requestHeaders['X-Requested-With'];
-          callback({ requestHeaders });
-        });
-
-        contents.session.webRequest.onHeadersReceived({ urls: ['*://*.google.com/*', '*://*.gemini.google.com/*'] }, (details, callback) => {
-          const responseHeaders = details.responseHeaders;
-          delete responseHeaders['x-frame-options'];
-          delete responseHeaders['X-Frame-Options'];
-          callback({ cancel: false, responseHeaders });
         });
       }
     });
