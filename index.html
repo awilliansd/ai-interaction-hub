@@ -82,15 +82,19 @@
         <button id="btn-deepseek" onclick="showTab('deepseek')" oncontextmenu="showTabContextMenu(event, 'deepseek')">
           <img src="assets/icons/deepseek.png" alt="DeepSeek" width="32" height="32">
         </button>
-        <button id="btn-grok" onclick="showTab('grok')" oncontextmenu="showTabContextMenu(event, 'grok')">
-          <img src="assets/icons/grok.png" alt="Grok" width="32" height="32">
-        </button>
         <button id="btn-manus" onclick="showTab('manus')" oncontextmenu="showTabContextMenu(event, 'manus')">
           <img src="assets/icons/manus.png" alt="Manus" width="32" height="32">
+        </button>
+        <button id="btn-grok" onclick="showTab('grok')" oncontextmenu="showTabContextMenu(event, 'grok')">
+          <img src="assets/icons/grok.png" alt="Grok" width="32" height="32">
         </button>
         <button id="btn-kimi" onclick="showTab('kimi')"
           oncontextmenu="showTabContextMenu(event, 'kimi')">
           <img src="assets/icons/kimi.png" alt="Kimi" width="32" height="32">
+        </button>
+        <button id="btn-zai" onclick="showTab('zai')"
+          oncontextmenu="showTabContextMenu(event, 'zai')">
+          <img src="assets/icons/zai.svg" alt="Z.ai" width="32" height="32">
         </button>
         <button id="btn-copilot" onclick="showTab('copilot')" oncontextmenu="showTabContextMenu(event, 'copilot')">
           <img src="assets/icons/mscopilot.png" alt="MS Copilot" width="32" height="32">
@@ -124,13 +128,14 @@
       <webview id="gemini" src="https://gemini.google.com/app" partition="persist:gemini" allowpopups></webview>
       <webview id="chatgpt" src="https://chat.openai.com" partition="persist:chatgpt" allowpopups></webview>
       <webview id="claude" src="https://claude.ai" partition="persist:claude" allowpopups></webview>
-      <webview id="deepseek" src="https://chat.deepseek.com" partition="persist:deepseek" allowpopups></webview>
+      <webview id="deepseek" src="https://chat.deepseek.com" partition="persist:deepseek" allowpopups preload="./assets/js/deepseek-preload.js"></webview>
       <webview id="grok" src="https://grok.com" partition="persist:grok" allowpopups></webview>
       <webview id="manus" src="https://manus.im/app" partition="persist:manus" allowpopups></webview>
       <webview id="copilot" src="https://copilot.microsoft.com" partition="persist:copilot" allowpopups></webview>
       <webview id="metaai" src="https://www.meta.ai" partition="persist:metaai" allowpopups></webview>
       <webview id="perplexity" src="https://www.perplexity.ai" partition="persist:perplexity" allowpopups></webview>
       <webview id="kimi" src="https://www.kimi.com/" partition="persist:kimi" allowpopups></webview>
+      <webview id="zai" src="https://chat.z.ai/" partition="persist:zai" allowpopups></webview>
     </div></div>
 
     <!-- Menu de Contexto Genérico (parece não usado) -->

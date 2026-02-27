@@ -4,23 +4,17 @@ const path = require("path");
 
 let mainWindow = null;
 
-// Função auxiliar para enviar comando para o renderer
 function sendCommandToRenderer(command) {
   if (mainWindow && mainWindow.webContents) {
-    console.log(`[Main Process] Attempting to send command: ${command}`);
     mainWindow.webContents.send(command);
-  } else {
-    console.error(`[Main Process] Cannot send command: ${command}. MainWindow or WebContents not available.`);
   }
 }
 
-// Recebe 'app' como parâmetro
 function createWindow(app, settings) {
   if (!app) {
     throw new Error("WindowManager: Instância do 'app' do Electron é necessária.");
   }
 
-  // Escolhe o ícone apropriado conforme empacotamento
   let windowIconPath;
   if (app.isPackaged) {
     windowIconPath = path.join(process.resourcesPath, 'icons', 'hicolor', '512x512', 'apps', 'aiinteractionhub.png');
@@ -37,43 +31,31 @@ function createWindow(app, settings) {
       contextIsolation: true,
       preload: path.join(app.getAppPath(), "assets/js/preload.js"),
       webviewTag: true,
-      spellcheck: true // Habilita verificação ortográfica globalmente
+      spellcheck: true
     },
     icon: windowIconPath
   });
 
   mainWindow.loadFile(path.join(app.getAppPath(), "index.html"));
 
-  // Reativar DevTools para diagnóstico (comentar após testes)
-  // console.log("[Main Process] Opening DevTools automatically for diagnostics.");
-  // mainWindow.webContents.openDevTools();
-
   mainWindow.webContents.on("did-finish-load", () => {
-    console.log("[Main Process] Window finished loading. Sending initial settings.");
     const currentSettings = require("./settingsManager").loadSettings();
     mainWindow.webContents.send("init-settings", currentSettings);
   });
 
-  // --- Criação do Menu com Aceleradores ---
   const menuTemplate = [
     {
       label: 'Arquivo',
       submenu: [
         {
           label: 'Configurações',
-          click: () => {
-            console.log("[Main Process] Menu: Configurações clicked");
-            sendCommandToRenderer('command:show-settings');
-          }
+          click: () => sendCommandToRenderer('command:show-settings')
         },
         { type: 'separator' },
         {
           label: 'Sair',
           accelerator: 'Alt+F4',
-          click: () => {
-            console.log("[Main Process] Menu: Sair clicked");
-            sendCommandToRenderer('command:exit-app');
-          }
+          click: () => sendCommandToRenderer('command:exit-app')
         }
       ]
     },
@@ -97,25 +79,17 @@ function createWindow(app, settings) {
         {
           label: 'Recarregar Aba Ativa',
           accelerator: 'CmdOrCtrl+R',
-          click: () => {
-            console.log("[Main Process] Accelerator CmdOrCtrl+R triggered.");
-            sendCommandToRenderer('command:reload-active-tab');
-          }
+          click: () => sendCommandToRenderer('command:reload-active-tab')
         },
         {
           label: 'Buscar na Aba Ativa',
           accelerator: 'CmdOrCtrl+F',
-          click: () => {
-            console.log("[Main Process] Accelerator CmdOrCtrl+F triggered.");
-            sendCommandToRenderer('command:find-in-active-tab');
-          }
+          click: () => sendCommandToRenderer('command:find-in-active-tab')
         },
         { type: 'separator' },
         {
           label: 'Limpar Cache e Reiniciar',
           click: () => {
-            console.log("[Main Process] Menu: Limpar Cache clicado.");
-            // Envia o comando para o handler IPC
             const { ipcMain } = require('electron');
             ipcMain.emit('clear-app-cache');
           }
@@ -128,10 +102,7 @@ function createWindow(app, settings) {
       submenu: [
         {
           label: 'Sobre',
-          click: () => {
-            console.log("[Main Process] Menu: Sobre clicked");
-            sendCommandToRenderer('command:show-about');
-          }
+          click: () => sendCommandToRenderer('command:show-about')
         }
       ]
     }
@@ -139,15 +110,11 @@ function createWindow(app, settings) {
 
   const menu = Menu.buildFromTemplate(menuTemplate);
   Menu.setApplicationMenu(menu);
-  console.log("[Main Process] Application menu set.");
 
-  // Configurar o menu para estar sempre visível
   mainWindow.setMenuBarVisibility(true);
   mainWindow.setAutoHideMenuBar(false);
-  console.log("[Main Process] Menu bar set to always visible.");
 
   mainWindow.on("closed", () => {
-    console.log("[Main Process] Main window closed.");
     mainWindow = null;
   });
 
@@ -160,18 +127,14 @@ function getMainWindow() {
 
 function showWindow() {
   if (mainWindow) {
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore();
-    }
+    if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
   }
 }
 
 function hideWindow() {
-  if (mainWindow) {
-    mainWindow.hide();
-  }
+  if (mainWindow) mainWindow.hide();
 }
 
 module.exports = {
