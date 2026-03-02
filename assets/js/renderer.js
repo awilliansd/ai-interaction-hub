@@ -264,8 +264,9 @@ function getActiveWebview() {
 document.addEventListener("DOMContentLoaded", () => {
   applyAppMode();
 
-  // Carregar primeira aba
-  showTab('gemini');
+  // Carregar primeira aba disponível do modo atual
+  const initialTab = getAllowedTabs()[0];
+  if (initialTab) showTab(initialTab);
   
   // Listeners globais
   document.addEventListener("click", (e) => {
