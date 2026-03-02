@@ -188,6 +188,22 @@ body {
     font-size: 16px;
 }
 
+.setting-title {
+    color: #fff;
+    margin: 0 0 8px 0;
+    font-size: 16px;
+}
+
+.setting-select {
+    width: 100%;
+    background-color: #3a3a3a;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 14px;
+}
+
 .shortcut-info {
     color: #ccc;
     margin: 5px 0;
@@ -277,6 +293,11 @@ body {
     background-color: #505050;
     transform: scale(1.1);
     color: #00ccff;
+}
+
+#sidebar button.text-icon {
+    font-weight: 700;
+    font-size: 16px;
 }
 
 #webview-container {

@@ -40,6 +40,14 @@
         <p class="setting-description">Prioriza a velocidade de troca de abas em detrimento do consumo de memória RAM. Desativado por padrão para otimização de memória.</p>
       </div>
       <div class="setting-item">
+        <p class="setting-title">Modo da aplicação</p>
+        <select id="app-mode" class="setting-select" onchange="toggleAppMode()">
+          <option value="personal">Pessoal</option>
+          <option value="developer">Desenvolvedor</option>
+        </select>
+        <p class="setting-description">No modo desenvolvedor, somente as abas Manus, Replit e Z.ai ficam disponíveis.</p>
+      </div>
+      <div class="setting-item">
         <h3>Comandos de ajuda</h3>
         <p class="shortcut-info"><strong>Botão direito:</strong> Menu de contexto nas abas</p>
         <p class="shortcut-info"><strong>CTRL+R:</strong> Recarregar aba</p>
@@ -82,7 +90,7 @@
         <button id="btn-deepseek" onclick="showTab('deepseek')" oncontextmenu="showTabContextMenu(event, 'deepseek')">
           <img src="assets/icons/deepseek.png" alt="DeepSeek" width="32" height="32">
         </button>
-        <button id="btn-manus" onclick="showTab('manus')" oncontextmenu="showTabContextMenu(event, 'manus')">
+        <button id="btn-manus" onclick="showTab('manus')" oncontextmenu="showTabContextMenu(event, 'manus')" data-mode="developer">
           <img src="assets/icons/manus.png" alt="Manus" width="32" height="32">
         </button>
         <button id="btn-grok" onclick="showTab('grok')" oncontextmenu="showTabContextMenu(event, 'grok')">
@@ -93,8 +101,11 @@
           <img src="assets/icons/kimi.png" alt="Kimi" width="32" height="32">
         </button>
         <button id="btn-zai" onclick="showTab('zai')"
-          oncontextmenu="showTabContextMenu(event, 'zai')">
+          oncontextmenu="showTabContextMenu(event, 'zai')" data-mode="developer">
           <img src="assets/icons/zai.svg" alt="Z.ai" width="32" height="32">
+        </button>
+        <button id="btn-replit" class="text-icon" onclick="showTab('replit')" oncontextmenu="showTabContextMenu(event, 'replit')" data-mode="developer">
+          <span>R</span>
         </button>
         <button id="btn-copilot" onclick="showTab('copilot')" oncontextmenu="showTabContextMenu(event, 'copilot')">
           <img src="assets/icons/mscopilot.png" alt="MS Copilot" width="32" height="32">
@@ -130,12 +141,13 @@
       <webview id="claude" src="https://claude.ai" partition="persist:claude" allowpopups></webview>
       <webview id="deepseek" src="https://chat.deepseek.com" partition="persist:deepseek" allowpopups preload="./assets/js/deepseek-preload.js"></webview>
       <webview id="grok" src="https://grok.com" partition="persist:grok" allowpopups></webview>
-      <webview id="manus" src="https://manus.im/app" partition="persist:manus" allowpopups></webview>
+      <webview id="manus" src="https://manus.im/app" partition="persist:manus" allowpopups data-mode="developer"></webview>
       <webview id="copilot" src="https://copilot.microsoft.com" partition="persist:copilot" allowpopups></webview>
       <webview id="metaai" src="https://www.meta.ai" partition="persist:metaai" allowpopups></webview>
       <webview id="perplexity" src="https://www.perplexity.ai" partition="persist:perplexity" allowpopups></webview>
       <webview id="kimi" src="https://www.kimi.com/" partition="persist:kimi" allowpopups></webview>
-      <webview id="zai" src="https://chat.z.ai/" partition="persist:zai" allowpopups></webview>
+      <webview id="zai" src="https://chat.z.ai/" partition="persist:zai" allowpopups data-mode="developer"></webview>
+      <webview id="replit" src="https://replit.com/" partition="persist:replit" allowpopups data-mode="developer"></webview>
     </div></div>
 
     <!-- Menu de Contexto Genérico (parece não usado) -->
