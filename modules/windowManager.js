@@ -51,6 +51,24 @@ function createWindow(app, settings) {
           label: 'Configurações',
           click: () => sendCommandToRenderer('command:show-settings')
         },
+        {
+          label: 'Modo da Aplicação',
+          submenu: [
+            {
+              label: 'Alternar Modo',
+              click: () => sendCommandToRenderer('command:toggle-app-mode')
+            },
+            { type: 'separator' },
+            {
+              label: 'Pessoal',
+              click: () => sendCommandToRenderer('command:set-app-mode-personal')
+            },
+            {
+              label: 'Desenvolvedor',
+              click: () => sendCommandToRenderer('command:set-app-mode-developer')
+            }
+          ]
+        },
         { type: 'separator' },
         {
           label: 'Sair',

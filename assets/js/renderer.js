@@ -52,6 +52,22 @@ function isTabAllowed(tabId) {
   return getAllowedTabs().includes(tabId);
 }
 
+function updateAppModeControls() {
+  const appModeSelect = document.getElementById("app-mode");
+  if (appModeSelect) appModeSelect.value = appMode;
+
+  const appModeIndicator = document.getElementById("app-mode-indicator");
+  if (appModeIndicator) {
+    appModeIndicator.textContent = appMode === APP_MODES.DEVELOPER ? "D" : "P";
+  }
+
+  const modeButton = document.getElementById("btn-app-mode");
+  if (modeButton) {
+    const modeLabel = appMode === APP_MODES.DEVELOPER ? "Desenvolvedor" : "Pessoal";
+    modeButton.title = `Alternar modo: ${modeLabel}`;
+  }
+}
+
 function applyAppMode() {
   const allowedTabs = getAllowedTabs();
 
@@ -63,6 +79,8 @@ function applyAppMode() {
   document.querySelectorAll("#webview-container webview[id]").forEach((webview) => {
     webview.style.display = allowedTabs.includes(webview.id) ? "" : "none";
   });
+
+  updateAppModeControls();
 }
 
 function toggleMenu(menuId) {
@@ -96,8 +114,7 @@ function showSettings() {
     if (minimizeCheckbox) minimizeCheckbox.checked = minimizeToTray;
     const keepActiveCheckbox = document.getElementById("keep-tabs-active");
     if (keepActiveCheckbox) keepActiveCheckbox.checked = keepTabsActive;
-    const appModeSelect = document.getElementById("app-mode");
-    if (appModeSelect) appModeSelect.value = appMode;
+    updateAppModeControls();
   }
   hideAllMenus();
 }
@@ -122,13 +139,12 @@ function toggleKeepTabsActive() {
   window.location.reload();
 }
 
-function toggleAppMode() {
-  const appModeSelect = document.getElementById("app-mode");
-  const selectedMode = appModeSelect && appModeSelect.value === APP_MODES.DEVELOPER
-    ? APP_MODES.DEVELOPER
-    : APP_MODES.PERSONAL;
-
-  if (selectedMode === appMode) return;
+function setAppMode(mode) {
+  const selectedMode = mode === APP_MODES.DEVELOPER ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
+  if (selectedMode === appMode) {
+    updateAppModeControls();
+    return;
+  }
 
   appMode = selectedMode;
   localStorage.setItem("appMode", appMode);
@@ -142,6 +158,19 @@ function toggleAppMode() {
     const fallbackTab = getAllowedTabs()[0];
     if (fallbackTab) showTab(fallbackTab);
   }
+}
+
+function toggleAppMode() {
+  const appModeSelect = document.getElementById("app-mode");
+  const selectedMode = appModeSelect && appModeSelect.value === APP_MODES.DEVELOPER
+    ? APP_MODES.DEVELOPER
+    : APP_MODES.PERSONAL;
+  setAppMode(selectedMode);
+}
+
+function cycleAppMode() {
+  const nextMode = appMode === APP_MODES.PERSONAL ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
+  setAppMode(nextMode);
 }
 
 function showTabContextMenu(event, tabId) {
@@ -278,6 +307,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (window.electronAPI && window.electronAPI.commands) {
     window.electronAPI.commands.onReloadActiveTab(() => reloadCurrentTab());
     window.electronAPI.commands.onShowSettings(() => showSettings());
+    window.electronAPI.commands.onToggleAppMode(() => cycleAppMode());
+    window.electronAPI.commands.onSetAppModePersonal(() => setAppMode(APP_MODES.PERSONAL));
+    window.electronAPI.commands.onSetAppModeDeveloper(() => setAppMode(APP_MODES.DEVELOPER));
     window.electronAPI.commands.onShowAbout(() => showAbout());
     window.electronAPI.commands.onExitApp(() => exitApp());
   }

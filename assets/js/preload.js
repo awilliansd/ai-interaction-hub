@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     onFindInActiveTab: (callback) => ipcRenderer.on("command:find-in-active-tab", () => callback()),
     onStopFindInActiveTab: (callback) => ipcRenderer.on("command:stop-find-in-active-tab", () => callback()),
     onShowSettings: (callback) => ipcRenderer.on("command:show-settings", () => callback()),
+    onToggleAppMode: (callback) => ipcRenderer.on("command:toggle-app-mode", () => callback()),
+    onSetAppModePersonal: (callback) => ipcRenderer.on("command:set-app-mode-personal", () => callback()),
+    onSetAppModeDeveloper: (callback) => ipcRenderer.on("command:set-app-mode-developer", () => callback()),
     onShowAbout: (callback) => ipcRenderer.on("command:show-about", () => callback()),
     onExitApp: (callback) => ipcRenderer.on("command:exit-app", () => callback()),
     onOpenGitHub: (callback) => ipcRenderer.on("command:open-github", () => callback())
