@@ -6,6 +6,7 @@ const tabConfigs = {
   deepseek: { url: "https://chat.deepseek.com", partition: "persist:deepseek" },
   grok: { url: "https://grok.com", partition: "persist:grok" },
   manus: { url: "https://manus.im/app", partition: "persist:manus" },
+  replit: { url: "https://replit.com/", partition: "persist:replit" },
   copilot: { url: "https://copilot.microsoft.com", partition: "persist:copilot" },
   metaai: { url: "https://www.meta.ai", partition: "persist:metaai" },
   perplexity: { url: "https://www.perplexity.ai", partition: "persist:perplexity" },
@@ -13,10 +14,74 @@ const tabConfigs = {
   zai: { url: "https://chat.z.ai/", partition: "persist:zai" },
 };
 
+const APP_MODES = {
+  PERSONAL: "personal",
+  DEVELOPER: "developer",
+};
+
+const personalTabs = [
+  "gemini",
+  "chatgpt",
+  "claude",
+  "deepseek",
+  "grok",
+  "copilot",
+  "metaai",
+  "perplexity",
+  "kimi",
+];
+
+const developerTabs = ["claude", "manus",  "replit", "zai"];
+
+const tabsByMode = {
+  [APP_MODES.PERSONAL]: personalTabs,
+  [APP_MODES.DEVELOPER]: developerTabs,
+};
+
 let activeWebview = null;
 let currentTabId = null;
 let keepTabsActive = localStorage.getItem("keepTabsActive") === "true";
 let minimizeToTray = localStorage.getItem("minimizeToTray") === "true";
+let appMode = localStorage.getItem("appMode") === APP_MODES.DEVELOPER ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
+
+function getAllowedTabs() {
+  return tabsByMode[appMode] || tabsByMode[APP_MODES.PERSONAL];
+}
+
+function isTabAllowed(tabId) {
+  return getAllowedTabs().includes(tabId);
+}
+
+function updateAppModeControls() {
+  const appModeSelect = document.getElementById("app-mode");
+  if (appModeSelect) appModeSelect.value = appMode;
+
+  const appModeIndicator = document.getElementById("app-mode-indicator");
+  if (appModeIndicator) {
+    appModeIndicator.textContent = appMode === APP_MODES.DEVELOPER ? "D" : "P";
+  }
+
+  const modeButton = document.getElementById("btn-app-mode");
+  if (modeButton) {
+    const modeLabel = appMode === APP_MODES.DEVELOPER ? "Desenvolvedor" : "Pessoal";
+    modeButton.title = `Alternar modo: ${modeLabel}`;
+  }
+}
+
+function applyAppMode() {
+  const allowedTabs = getAllowedTabs();
+
+  document.querySelectorAll("#sidebar .sidebar-top button[id^='btn-']").forEach((button) => {
+    const tabId = button.id.replace("btn-", "");
+    button.style.display = allowedTabs.includes(tabId) ? "" : "none";
+  });
+
+  document.querySelectorAll("#webview-container webview[id]").forEach((webview) => {
+    webview.style.display = allowedTabs.includes(webview.id) ? "" : "none";
+  });
+
+  updateAppModeControls();
+}
 
 function toggleMenu(menuId) {
   document.querySelectorAll(".dropdown-menu").forEach(menu => {
@@ -49,6 +114,7 @@ function showSettings() {
     if (minimizeCheckbox) minimizeCheckbox.checked = minimizeToTray;
     const keepActiveCheckbox = document.getElementById("keep-tabs-active");
     if (keepActiveCheckbox) keepActiveCheckbox.checked = keepTabsActive;
+    updateAppModeControls();
   }
   hideAllMenus();
 }
@@ -73,7 +139,37 @@ function toggleKeepTabsActive() {
   window.location.reload();
 }
 
+function setAppMode(mode) {
+  const selectedMode = mode === APP_MODES.DEVELOPER ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
+  if (selectedMode === appMode) {
+    updateAppModeControls();
+    return;
+  }
+
+  appMode = selectedMode;
+  localStorage.setItem("appMode", appMode);
+  resetAllWebviews();
+  applyAppMode();
+
+  const firstTabForMode = getAllowedTabs()[0];
+  if (firstTabForMode) showTab(firstTabForMode);
+}
+
+function toggleAppMode() {
+  const appModeSelect = document.getElementById("app-mode");
+  const selectedMode = appModeSelect && appModeSelect.value === APP_MODES.DEVELOPER
+    ? APP_MODES.DEVELOPER
+    : APP_MODES.PERSONAL;
+  setAppMode(selectedMode);
+}
+
+function cycleAppMode() {
+  const nextMode = appMode === APP_MODES.PERSONAL ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
+  setAppMode(nextMode);
+}
+
 function showTabContextMenu(event, tabId) {
+  if (!isTabAllowed(tabId)) return;
   event.preventDefault();
   event.stopPropagation();
   document.body.setAttribute("data-current-tab", tabId);
@@ -125,6 +221,7 @@ function attachWebviewListeners(webview) {
 }
 
 function showTab(tabId) {
+  if (!isTabAllowed(tabId)) return;
   if (currentTabId === tabId && keepTabsActive) return;
 
   const container = document.getElementById("webview-container");
@@ -187,10 +284,24 @@ function getActiveWebview() {
   return activeWebview;
 }
 
+function resetAllWebviews() {
+  const container = document.getElementById("webview-container");
+  if (!container) return;
+
+  container.querySelectorAll("webview").forEach((webview) => webview.remove());
+  activeWebview = null;
+  currentTabId = null;
+  document.body.removeAttribute("data-current-tab");
+  document.querySelectorAll("#sidebar button").forEach((btn) => btn.classList.remove("active-button"));
+}
+
 // Inicialização
 document.addEventListener("DOMContentLoaded", () => {
-  // Carregar primeira aba
-  showTab('gemini');
+  applyAppMode();
+
+  // Carregar primeira aba disponível do modo atual
+  const initialTab = getAllowedTabs()[0];
+  if (initialTab) showTab(initialTab);
   
   // Listeners globais
   document.addEventListener("click", (e) => {
@@ -202,6 +313,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (window.electronAPI && window.electronAPI.commands) {
     window.electronAPI.commands.onReloadActiveTab(() => reloadCurrentTab());
     window.electronAPI.commands.onShowSettings(() => showSettings());
+    window.electronAPI.commands.onToggleAppMode(() => cycleAppMode());
+    window.electronAPI.commands.onSetAppModePersonal(() => setAppMode(APP_MODES.PERSONAL));
+    window.electronAPI.commands.onSetAppModeDeveloper(() => setAppMode(APP_MODES.DEVELOPER));
     window.electronAPI.commands.onShowAbout(() => showAbout());
     window.electronAPI.commands.onExitApp(() => exitApp());
   }
