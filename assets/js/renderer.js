@@ -31,7 +31,7 @@ const personalTabs = [
   "kimi",
 ];
 
-const developerTabs = ["manus", "replit", "zai"];
+const developerTabs = ["claude", "manus",  "replit", "zai"];
 
 const tabsByMode = {
   [APP_MODES.PERSONAL]: personalTabs,
@@ -150,14 +150,8 @@ function setAppMode(mode) {
   localStorage.setItem("appMode", appMode);
   applyAppMode();
 
-  if (!isTabAllowed(currentTabId)) {
-    if (activeWebview) {
-      activeWebview.remove();
-      activeWebview = null;
-    }
-    const fallbackTab = getAllowedTabs()[0];
-    if (fallbackTab) showTab(fallbackTab);
-  }
+  const firstTabForMode = getAllowedTabs()[0];
+  if (firstTabForMode) showTab(firstTabForMode);
 }
 
 function toggleAppMode() {
