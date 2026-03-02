@@ -95,6 +95,21 @@ function exitApp() { window.electronAPI.app.exit(); }
 function openGitHub() { window.electronAPI.links.openGitHub(); }
 function getCurrentYear() { return new Date().getFullYear(); }
 
+async function initializeAboutInfo() {
+  const yearElement = document.getElementById("current-year");
+  if (yearElement) yearElement.textContent = String(getCurrentYear());
+
+  const versionElement = document.getElementById("app-version");
+  if (!versionElement) return;
+
+  try {
+    const version = await window.electronAPI.app.getVersion();
+    versionElement.textContent = version || "N/A";
+  } catch (_error) {
+    versionElement.textContent = "N/A";
+  }
+}
+
 function showAbout() {
   const modal = document.getElementById("about-modal");
   if (modal) modal.style.display = "block";
@@ -297,6 +312,7 @@ function resetAllWebviews() {
 
 // Inicialização
 document.addEventListener("DOMContentLoaded", () => {
+  initializeAboutInfo();
   applyAppMode();
 
   // Carregar primeira aba disponível do modo atual
