@@ -96,6 +96,7 @@ function openGitHub() { window.electronAPI.links.openGitHub(); }
 function getCurrentYear() { return new Date().getFullYear(); }
 
 async function initializeAboutInfo() {
+  const appName = "AI Interaction Hub";
   const yearElement = document.getElementById("current-year");
   if (yearElement) yearElement.textContent = String(getCurrentYear());
 
@@ -104,9 +105,12 @@ async function initializeAboutInfo() {
 
   try {
     const version = await window.electronAPI.app.getVersion();
-    versionElement.textContent = version || "N/A";
+    const resolvedVersion = version || "N/A";
+    versionElement.textContent = resolvedVersion;
+    document.title = `${appName} - v${resolvedVersion}`;
   } catch (_error) {
     versionElement.textContent = "N/A";
+    document.title = appName;
   }
 }
 
