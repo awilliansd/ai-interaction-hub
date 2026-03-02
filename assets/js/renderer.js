@@ -148,6 +148,7 @@ function setAppMode(mode) {
 
   appMode = selectedMode;
   localStorage.setItem("appMode", appMode);
+  resetAllWebviews();
   applyAppMode();
 
   const firstTabForMode = getAllowedTabs()[0];
@@ -281,6 +282,17 @@ function createWebviewElement(tabId) {
 
 function getActiveWebview() {
   return activeWebview;
+}
+
+function resetAllWebviews() {
+  const container = document.getElementById("webview-container");
+  if (!container) return;
+
+  container.querySelectorAll("webview").forEach((webview) => webview.remove());
+  activeWebview = null;
+  currentTabId = null;
+  document.body.removeAttribute("data-current-tab");
+  document.querySelectorAll("#sidebar button").forEach((btn) => btn.classList.remove("active-button"));
 }
 
 // Inicialização
