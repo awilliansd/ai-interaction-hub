@@ -14,6 +14,8 @@ function createWindow(app, settings) {
   if (!app) {
     throw new Error("WindowManager: Instância do 'app' do Electron é necessária.");
   }
+  const appVersion = app.getVersion();
+  const appWindowTitle = `AI Interaction Hub - v${appVersion}`;
 
   let windowIconPath;
   if (app.isPackaged) {
@@ -25,7 +27,8 @@ function createWindow(app, settings) {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    title: "AI Interaction Hub",
+    title: appWindowTitle,
+    backgroundColor: "#1e1e1e",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -41,6 +44,7 @@ function createWindow(app, settings) {
   mainWindow.webContents.on("did-finish-load", () => {
     const currentSettings = require("./settingsManager").loadSettings();
     mainWindow.webContents.send("init-settings", currentSettings);
+    mainWindow.setTitle(appWindowTitle);
   });
 
   const menuTemplate = [
