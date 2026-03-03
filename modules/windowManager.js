@@ -28,6 +28,7 @@ function createWindow(app, settings) {
     width: 1200,
     height: 800,
     title: appWindowTitle,
+    backgroundColor: "#1e1e1e",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
