@@ -45,7 +45,7 @@
           <option value="personal">Pessoal</option>
           <option value="developer">Desenvolvedor</option>
         </select>
-        <p class="setting-description">No modo desenvolvedor, somente as abas Claude, Manus, Replit e Z.ai ficam disponíveis.</p>
+        <p class="setting-description">No modo desenvolvedor, somente as abas Claude, Manus, Replit, Groq e Z.ai ficam disponíveis.</p>
       </div>
       <div class="setting-item">
         <h3>Comandos de ajuda</h3>
@@ -107,6 +107,9 @@
         <button id="btn-replit" class="text-icon" onclick="showTab('replit')" oncontextmenu="showTabContextMenu(event, 'replit')" data-mode="developer">
           <img src="assets/icons/replit.ico" alt="Replit" width="32" height="32">
         </button>
+        <button id="btn-groq" class="text-icon" onclick="showTab('groq')" oncontextmenu="showTabContextMenu(event, 'groq')" data-mode="developer" title="Groq">
+          <img src="assets/icons/groq.ico" alt="Groq" width="32" height="32">
+        </button>
         <button id="btn-copilot" onclick="showTab('copilot')" oncontextmenu="showTabContextMenu(event, 'copilot')">
           <img src="assets/icons/mscopilot.png" alt="MS Copilot" width="32" height="32">
         </button>
@@ -151,6 +154,7 @@
       <webview id="kimi" src="https://www.kimi.com/" partition="persist:kimi" allowpopups></webview>
       <webview id="zai" src="https://chat.z.ai/" partition="persist:zai" allowpopups data-mode="developer"></webview>
       <webview id="replit" src="https://replit.com/" partition="persist:replit" allowpopups data-mode="developer"></webview>
+      <webview id="groq" src="https://console.groq.com/playground" partition="persist:groq" allowpopups data-mode="developer"></webview>
     </div></div>
 
     <!-- Menu de Contexto Genérico (parece não usado) -->

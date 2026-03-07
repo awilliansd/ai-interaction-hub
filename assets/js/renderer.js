@@ -7,6 +7,7 @@ const tabConfigs = {
   grok: { url: "https://grok.com", partition: "persist:grok" },
   manus: { url: "https://manus.im/app", partition: "persist:manus" },
   replit: { url: "https://replit.com/", partition: "persist:replit" },
+  groq: { url: "https://console.groq.com/playground", partition: "persist:groq" },
   copilot: { url: "https://copilot.microsoft.com", partition: "persist:copilot" },
   metaai: { url: "https://www.meta.ai", partition: "persist:metaai" },
   perplexity: { url: "https://www.perplexity.ai", partition: "persist:perplexity" },
@@ -31,7 +32,7 @@ const personalTabs = [
   "kimi",
 ];
 
-const developerTabs = ["claude", "manus",  "replit", "zai"];
+const developerTabs = ["claude", "manus", "replit", "groq", "zai"];
 
 const tabsByMode = {
   [APP_MODES.PERSONAL]: personalTabs,
