@@ -1,6 +1,7 @@
 const { Tray, Menu } = require('electron');
 const trayManager = require('./trayManager');
 const path = require('path');
+const fs = require('fs');
 
 // Mock do módulo electron
 jest.mock('electron', () => ({
@@ -12,6 +13,10 @@ jest.mock('electron', () => ({
   Menu: {
     buildFromTemplate: jest.fn()
   }
+}));
+
+jest.mock('fs', () => ({
+  existsSync: jest.fn()
 }));
 
 // Mock dos módulos internos
@@ -36,6 +41,7 @@ describe('trayManager', () => {
   beforeEach(() => {
     // Limpa todos os mocks antes de cada teste
     jest.clearAllMocks();
+    fs.existsSync.mockReturnValue(true);
     
     // Configura valores padrão para os mocks
     Tray.mockImplementation(() => ({
@@ -85,13 +91,16 @@ describe('trayManager', () => {
       // Simula app empacotada
       mockApp.isPackaged = true;
       Object.defineProperty(process, 'resourcesPath', {
-        value: '/path/to/resources'
+        value: '/path/to/resources',
+        configurable: true
       });
       
       trayManager.createTray(mockApp, mockMainWindow, mockSettingsManager);
       
       // Verifica se o caminho do ícone correto foi usado
-      const expectedIconPath = path.join('/path/to/resources', 'icons', 'hicolor', '512x512', 'apps', 'aiinteractionhub.png');
+      const expectedIconPath = process.platform === 'win32'
+        ? path.join('/path/to/resources', 'icons', 'app.ico')
+        : path.join('/path/to/resources', 'icons', 'hicolor', '512x512', 'apps', 'aiinteractionhub.png');
       expect(Tray).toHaveBeenCalledWith(expectedIconPath);
     });
 
@@ -103,24 +112,13 @@ describe('trayManager', () => {
       trayManager.createTray(mockApp, mockMainWindow, mockSettingsManager);
       
       // Verifica se o caminho do ícone correto foi usado
-      const expectedIconPath = path.join('/path/to/app', 'icons', 'app.png');
+      const expectedIconPath = process.platform === 'win32'
+        ? path.join('/path/to/app', 'icons', 'app.ico')
+        : path.join('/path/to/app', 'icons', 'app.png');
       expect(Tray).toHaveBeenCalledWith(expectedIconPath);
     });
 
-    it('deve tentar usar um ícone de fallback se o ícone principal falhar', () => {
-      // Simula falha ao criar a bandeja com o ícone principal
-      Tray.mockImplementationOnce(() => {
-        throw new Error('Erro ao carregar ícone');
-      });
-      
-      trayManager.createTray(mockApp, mockMainWindow, mockSettingsManager);
-      
-      // Verifica se o ícone de fallback foi usado
-      const fallbackIconPath = path.join(__dirname, '..', 'icons', 'default_icon.png');
-      expect(Tray).toHaveBeenNthCalledWith(2, fallbackIconPath);
-    });
-
-    it('deve retornar null se não conseguir criar a bandeja nem com o ícone de fallback', () => {
+    it('deve retornar null se não conseguir criar a bandeja', () => {
       // Simula falhas ao criar a bandeja
       Tray.mockImplementation(() => {
         throw new Error('Erro ao carregar ícone');
