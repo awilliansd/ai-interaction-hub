@@ -1,6 +1,7 @@
 // modules/trayManager.js
 const { Tray, Menu } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 let tray = null;
 
@@ -17,26 +18,43 @@ function createTray(app, mainWindow, settingsManager) {
 
   // Escolhe o ícone correto dependendo se a app está empacotada
   // Windows Tray funciona melhor com .ico (suporta transparência sem fundo)
-  let iconPath;
+  const isWindows = process.platform === "win32";
+  const iconCandidates = [];
+
   if (app.isPackaged) {
-    // Quando empacotado, os ícones gerados devem estar em process.resourcesPath/icons/hicolor/.../apps
-    iconPath = path.join(process.resourcesPath, "icons", "hicolor", "512x512", "apps", "aiinteractionhub.png");
+    if (isWindows) {
+      iconCandidates.push(path.join(process.resourcesPath, "icons", "app.ico"));
+    } else {
+      iconCandidates.push(
+        path.join(process.resourcesPath, "icons", "hicolor", "512x512", "apps", "aiinteractionhub.png")
+      );
+    }
   } else {
-    // Em desenvolvimento, usa o ícone local
-    iconPath = path.join(app.getAppPath(), "icons", "app.png");
+    if (isWindows) {
+      iconCandidates.push(path.join(app.getAppPath(), "icons", "app.ico"));
+    } else {
+      iconCandidates.push(path.join(app.getAppPath(), "icons", "app.png"));
+    }
+  }
+
+  // Fallbacks conhecidos no projeto
+  iconCandidates.push(
+    path.join(app.getAppPath(), "icons", "app.ico"),
+    path.join(app.getAppPath(), "icons", "app.png"),
+    path.join(app.getAppPath(), "icons", "aiinteractionhub.png")
+  );
+
+  const iconPath = iconCandidates.find((candidate) => fs.existsSync(candidate));
+  if (!iconPath) {
+    console.error("Erro ao criar Tray: nenhum ícone encontrado nos caminhos esperados.");
+    return null; // Não foi possível criar a bandeja
   }
 
   try {
     tray = new Tray(iconPath);
   } catch (error) {
     console.error(`Erro ao criar Tray com ícone em ${iconPath}:`, error);
-    // Tenta criar com um ícone de fallback relativo ao código
-    try {
-      tray = new Tray(path.join(__dirname, "..", "icons", "default_icon.png"));
-    } catch (fallbackError) {
-      console.error("Erro ao criar Tray com ícone de fallback:", fallbackError);
-      return null; // Não foi possível criar a bandeja
-    }
+    return null; // Não foi possível criar a bandeja
   }
 
   tray.setToolTip("AI Interaction Hub");
