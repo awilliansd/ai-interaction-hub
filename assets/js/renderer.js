@@ -117,7 +117,7 @@ async function initializeAboutInfo() {
 
 function showAbout() {
   const modal = document.getElementById("about-modal");
-  if (modal) modal.style.display = "block";
+  if (modal) modal.style.display = "flex";
   hideAllMenus();
 }
 
@@ -129,7 +129,7 @@ function hideAbout() {
 function showSettings() {
   const modal = document.getElementById("settings-modal");
   if (modal) {
-    modal.style.display = "block";
+    modal.style.display = "flex";
     const minimizeCheckbox = document.getElementById("minimize-to-tray");
     if (minimizeCheckbox) minimizeCheckbox.checked = minimizeToTray;
     const keepActiveCheckbox = document.getElementById("keep-tabs-active");
