@@ -17,11 +17,16 @@ function createWindow(app, settings) {
   const appVersion = app.getVersion();
   const appWindowTitle = `AI Interaction Hub - v${appVersion}`;
 
+  const isWindows = process.platform === "win32";
   let windowIconPath;
   if (app.isPackaged) {
-    windowIconPath = path.join(process.resourcesPath, 'icons', 'hicolor', '512x512', 'apps', 'aiinteractionhub.png');
+    windowIconPath = isWindows
+      ? path.join(process.resourcesPath, 'icons', 'app.ico')
+      : path.join(process.resourcesPath, 'icons', 'hicolor', '512x512', 'apps', 'aiinteractionhub.png');
   } else {
-    windowIconPath = path.join(app.getAppPath(), 'icons', 'app.png');
+    windowIconPath = isWindows
+      ? path.join(app.getAppPath(), 'icons', 'app.ico')
+      : path.join(app.getAppPath(), 'icons', 'app.png');
   }
 
   mainWindow = new BrowserWindow({
