@@ -3,6 +3,13 @@ const { BrowserWindow, Menu } = require("electron");
 const path = require("path");
 
 let mainWindow = null;
+let baseWindowTitle = "AI Interaction Hub";
+let currentTabName = null;
+
+function buildWindowTitle(tabName) {
+  if (!tabName) return baseWindowTitle;
+  return `${baseWindowTitle} - ${tabName}`;
+}
 
 function sendCommandToRenderer(command) {
   if (mainWindow && mainWindow.webContents) {
@@ -15,7 +22,7 @@ function createWindow(app, settings) {
     throw new Error("WindowManager: Instância do 'app' do Electron é necessária.");
   }
   const appVersion = app.getVersion();
-  const appWindowTitle = `AI Interaction Hub - v${appVersion}`;
+  baseWindowTitle = `AI Interaction Hub - v${appVersion}`;
 
   const isWindows = process.platform === "win32";
   let windowIconPath;
@@ -32,7 +39,7 @@ function createWindow(app, settings) {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    title: appWindowTitle,
+    title: buildWindowTitle(null),
     backgroundColor: "#1e1e1e",
     webPreferences: {
       nodeIntegration: false,
@@ -49,7 +56,7 @@ function createWindow(app, settings) {
   mainWindow.webContents.on("did-finish-load", () => {
     const currentSettings = require("./settingsManager").loadSettings();
     mainWindow.webContents.send("init-settings", currentSettings);
-    mainWindow.setTitle(appWindowTitle);
+    setWindowTitle(currentTabName);
   });
 
   const menuTemplate = [
@@ -152,6 +159,13 @@ function getMainWindow() {
   return mainWindow;
 }
 
+function setWindowTitle(tabName) {
+  currentTabName = tabName || null;
+  if (mainWindow) {
+    mainWindow.setTitle(buildWindowTitle(currentTabName));
+  }
+}
+
 function showWindow() {
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
@@ -167,6 +181,7 @@ function hideWindow() {
 module.exports = {
   createWindow,
   getMainWindow,
+  setWindowTitle,
   showWindow,
   hideWindow
 };

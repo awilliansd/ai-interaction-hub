@@ -15,6 +15,22 @@ const tabConfigs = {
   zai: { url: "https://chat.z.ai/", partition: "persist:zai" },
 };
 
+const tabLabels = {
+  gemini: "Gemini",
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  deepseek: "DeepSeek",
+  grok: "Grok",
+  manus: "Manus",
+  replit: "Replit",
+  groq: "Groq",
+  copilot: "MS Copilot",
+  metaai: "Meta AI",
+  perplexity: "Perplexity",
+  kimi: "Kimi",
+  zai: "Z.ai",
+};
+
 const APP_MODES = {
   PERSONAL: "personal",
   DEVELOPER: "developer",
@@ -255,6 +271,10 @@ function showTab(tabId) {
 
   currentTabId = tabId;
   document.body.setAttribute("data-current-tab", tabId);
+  if (window.electronAPI && window.electronAPI.app && window.electronAPI.app.setWindowTitle) {
+    const tabName = tabLabels[tabId] || tabId;
+    window.electronAPI.app.setWindowTitle(tabName);
+  }
 
   if (keepTabsActive) {
     // Modo Estático
