@@ -61,6 +61,18 @@ let keepTabsActive = localStorage.getItem("keepTabsActive") === "true";
 let minimizeToTray = localStorage.getItem("minimizeToTray") === "true";
 let appMode = localStorage.getItem("appMode") === APP_MODES.DEVELOPER ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
 
+function updateWindowTitleForTab(tabId) {
+  if (window.electronAPI && window.electronAPI.app && window.electronAPI.app.setWindowTitle) {
+    const tabName = tabLabels[tabId] || tabId;
+    window.electronAPI.app.setWindowTitle(tabName);
+  }
+}
+
+function updateWindowTitleForCurrentTab() {
+  const tabId = currentTabId || getAllowedTabs()[0];
+  if (tabId) updateWindowTitleForTab(tabId);
+}
+
 function getAllowedTabs() {
   return tabsByMode[appMode] || tabsByMode[APP_MODES.PERSONAL];
 }
@@ -271,10 +283,7 @@ function showTab(tabId) {
 
   currentTabId = tabId;
   document.body.setAttribute("data-current-tab", tabId);
-  if (window.electronAPI && window.electronAPI.app && window.electronAPI.app.setWindowTitle) {
-    const tabName = tabLabels[tabId] || tabId;
-    window.electronAPI.app.setWindowTitle(tabName);
-  }
+  updateWindowTitleForTab(tabId);
 
   if (keepTabsActive) {
     // Modo Estático
@@ -337,18 +346,27 @@ function resetAllWebviews() {
 
 // Inicialização
 document.addEventListener("DOMContentLoaded", () => {
+  // Garante o título com a aba após o init-settings (enviado no did-finish-load)
+  if (window.electronAPI && window.electronAPI.settings && window.electronAPI.settings.onInit) {
+    window.electronAPI.settings.onInit(() => {
+      updateWindowTitleForCurrentTab();
+    });
+  }
+
   initializeAboutInfo();
   applyAppMode();
 
   // Carregar primeira aba disponível do modo atual
   const initialTab = getAllowedTabs()[0];
   if (initialTab) showTab(initialTab);
+  setTimeout(() => updateWindowTitleForCurrentTab(), 200);
   
   // Listeners globais
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".dropdown")) hideAllMenus();
     if (!e.target.closest("#tab-context-menu")) hideTabContextMenu();
   });
+
 
   // Comandos do processo principal
   if (window.electronAPI && window.electronAPI.commands) {
