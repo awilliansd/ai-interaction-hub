@@ -10,7 +10,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getVersion: () => ipcRenderer.invoke('get-app-version'),
     getGrokUserAgent: () => ipcRenderer.invoke('get-grok-user-agent'),
     showWebviewContextMenu: (params) => ipcRenderer.invoke('show-webview-context-menu', params),
-    clearCache: () => ipcRenderer.send('clear-app-cache')
+    clearCache: () => ipcRenderer.send('clear-app-cache'),
+    setWindowTitle: (tabName) => ipcRenderer.send('set-window-title', tabName)
   },
   // Funções relacionadas às configurações
   settings: {

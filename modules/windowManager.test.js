@@ -99,14 +99,17 @@ describe('windowManager', () => {
       // Simula app empacotada
       mockApp.isPackaged = true;
       Object.defineProperty(process, 'resourcesPath', {
-        value: '/path/to/resources'
+        value: '/path/to/resources',
+        configurable: true
       });
       
       windowManager.createWindow(mockApp, mockSettings);
       
       // Verifica se o caminho do ícone correto foi usado
       const browserWindowOptions = BrowserWindow.mock.calls[0][0];
-      const expectedIconPath = path.join('/path/to/resources', 'icons', 'hicolor', '512x512', 'apps', 'aiinteractionhub.png');
+      const expectedIconPath = process.platform === 'win32'
+        ? path.join('/path/to/resources', 'icons', 'app.ico')
+        : path.join('/path/to/resources', 'icons', 'hicolor', '512x512', 'apps', 'aiinteractionhub.png');
       expect(browserWindowOptions.icon).toBe(expectedIconPath);
     });
 
@@ -119,7 +122,9 @@ describe('windowManager', () => {
       
       // Verifica se o caminho do ícone correto foi usado
       const browserWindowOptions = BrowserWindow.mock.calls[0][0];
-      const expectedIconPath = path.join('/path/to/app', 'icons', 'app.png');
+      const expectedIconPath = process.platform === 'win32'
+        ? path.join('/path/to/app', 'icons', 'app.ico')
+        : path.join('/path/to/app', 'icons', 'app.png');
       expect(browserWindowOptions.icon).toBe(expectedIconPath);
     });
 

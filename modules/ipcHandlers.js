@@ -28,6 +28,12 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     }
   });
 
+  // Atualizar o título da janela com o nome da aba atual
+  ipcMain.on("set-window-title", (event, tabName) => {
+    const windowManager = require("./windowManager");
+    windowManager.setWindowTitle(tabName);
+  });
+
   // Sair da aplicação
   ipcMain.on("exit-app", () => {
     const appLifecycle = require("./appLifecycle");
