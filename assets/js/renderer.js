@@ -61,16 +61,51 @@ let keepTabsActive = localStorage.getItem("keepTabsActive") === "true";
 let minimizeToTray = localStorage.getItem("minimizeToTray") === "true";
 let appMode = localStorage.getItem("appMode") === APP_MODES.DEVELOPER ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
 const WEBVIEW_MAX_AUTO_RETRIES = 3;
-const WEBVIEW_MAX_AUTO_RECREATES = 2;
-const WEBVIEW_LOAD_WATCHDOG_MS = 45000;
+const WEBVIEW_MAX_AUTO_RECREATES = 1;
+const WEBVIEW_LOAD_WATCHDOG_MS = 75000;
+const WEBVIEW_RECOVERY_TOAST_MS = 4500;
 const webviewRetryState = new Map();
 const webviewRecreateState = new Map();
 const webviewLoadWatchdogs = new Map();
+let recoveryToastEl = null;
 
 function getCleanChromeUserAgent() {
   return navigator.userAgent
     .replace(/\sElectron\/[^\s]+/i, "")
     .replace(/\sAI-Interaction-Hub\/[^\s]+/i, "");
+}
+
+function showWebviewRecoveryToast(message) {
+  if (!message) return;
+  if (!recoveryToastEl) {
+    recoveryToastEl = document.createElement("div");
+    recoveryToastEl.id = "webview-recovery-toast";
+    recoveryToastEl.style.position = "fixed";
+    recoveryToastEl.style.right = "14px";
+    recoveryToastEl.style.bottom = "14px";
+    recoveryToastEl.style.zIndex = "9999";
+    recoveryToastEl.style.maxWidth = "340px";
+    recoveryToastEl.style.padding = "8px 10px";
+    recoveryToastEl.style.borderRadius = "6px";
+    recoveryToastEl.style.background = "rgba(30, 30, 30, 0.9)";
+    recoveryToastEl.style.color = "#e9e9e9";
+    recoveryToastEl.style.fontSize = "12px";
+    recoveryToastEl.style.lineHeight = "1.4";
+    recoveryToastEl.style.pointerEvents = "none";
+    recoveryToastEl.style.opacity = "0";
+    recoveryToastEl.style.transition = "opacity 0.18s ease";
+    document.body.appendChild(recoveryToastEl);
+  }
+
+  recoveryToastEl.textContent = message;
+  recoveryToastEl.style.opacity = "1";
+
+  if (recoveryToastEl._hideTimer) {
+    window.clearTimeout(recoveryToastEl._hideTimer);
+  }
+  recoveryToastEl._hideTimer = window.setTimeout(() => {
+    if (recoveryToastEl) recoveryToastEl.style.opacity = "0";
+  }, WEBVIEW_RECOVERY_TOAST_MS);
 }
 
 function scheduleWebviewRetry(webview, reason) {
@@ -79,8 +114,15 @@ function scheduleWebviewRetry(webview, reason) {
   const tabId = webview.id;
   const currentRetry = webviewRetryState.get(tabId) || 0;
   if (currentRetry >= WEBVIEW_MAX_AUTO_RETRIES) {
-    console.warn(`[${tabId}] retry limit reached after ${reason}; attempting recreate.`);
-    attemptWebviewRecreate(tabId, `retry-limit (${reason})`);
+    // Evita recriar agressivamente em erros de carga comuns; tenta apenas em travamento/crash.
+    const shouldRecreate = reason.includes("render-process-gone") || reason.includes("watchdog-timeout");
+    if (shouldRecreate) {
+      console.warn(`[${tabId}] retry limit reached after ${reason}; attempting recreate.`);
+      attemptWebviewRecreate(tabId, `retry-limit (${reason})`);
+    } else {
+      console.warn(`[${tabId}] retry limit reached after ${reason}.`);
+      showWebviewRecoveryToast(`${tabLabels[tabId] || tabId}: conexão instável. Tente recarregar a aba.`);
+    }
     return;
   }
 
@@ -159,6 +201,7 @@ function attemptWebviewRecreate(tabId, reason) {
   }
 
   console.warn(`[${tabId}] webview recreated due to ${reason}.`);
+  showWebviewRecoveryToast(`${tabLabels[tabId] || tabId}: sessão reiniciada para recuperação.`);
 }
 
 function updateWindowTitleForTab(tabId) {
@@ -384,17 +427,20 @@ function attachWebviewListeners(webview) {
     if (event.errorCode === -3) return; // ERR_ABORTED (navigation interrupted intentionally)
     if (!event.isMainFrame) return;
     clearWebviewWatchdog(webview.id);
+    showWebviewRecoveryToast(`${tabLabels[webview.id] || webview.id}: falha de carregamento, tentando recuperar...`);
     scheduleWebviewRetry(webview, `did-fail-load (${event.errorCode})`);
   });
 
   webview.addEventListener("render-process-gone", (event) => {
     clearWebviewWatchdog(webview.id);
     const reason = event && event.details && event.details.reason ? event.details.reason : "unknown";
+    showWebviewRecoveryToast(`${tabLabels[webview.id] || webview.id}: processo da aba reiniciado (${reason}).`);
     scheduleWebviewRetry(webview, `render-process-gone (${reason})`);
   });
 
   webview.addEventListener("unresponsive", () => {
     clearWebviewWatchdog(webview.id);
+    showWebviewRecoveryToast(`${tabLabels[webview.id] || webview.id}: aba sem resposta, tentando recuperar...`);
     scheduleWebviewRetry(webview, "unresponsive");
   });
 }
@@ -471,6 +517,9 @@ function resetAllWebviews() {
 
   webviewLoadWatchdogs.forEach((timerId) => window.clearTimeout(timerId));
   webviewLoadWatchdogs.clear();
+  if (recoveryToastEl && recoveryToastEl._hideTimer) {
+    window.clearTimeout(recoveryToastEl._hideTimer);
+  }
   container.querySelectorAll("webview").forEach((webview) => webview.remove());
   activeWebview = null;
   currentTabId = null;
