@@ -452,9 +452,6 @@ function createWebviewElement(tabId) {
   webview.setAttribute("allowpopups", "");
   const cleanUserAgent = getCleanChromeUserAgent();
 
-  if (tabId === "gemini") {
-    webview.setAttribute("useragent", cleanUserAgent);
-  }
   if (tabId === "deepseek") {
     webview.setAttribute("useragent", cleanUserAgent);
     webview.setAttribute("preload", "./assets/js/deepseek-preload.js");
