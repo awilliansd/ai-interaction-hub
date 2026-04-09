@@ -60,6 +60,106 @@ let currentTabId = null;
 let keepTabsActive = localStorage.getItem("keepTabsActive") === "true";
 let minimizeToTray = localStorage.getItem("minimizeToTray") === "true";
 let appMode = localStorage.getItem("appMode") === APP_MODES.DEVELOPER ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
+const WEBVIEW_MAX_AUTO_RETRIES = 3;
+const WEBVIEW_MAX_AUTO_RECREATES = 2;
+const WEBVIEW_LOAD_WATCHDOG_MS = 45000;
+const webviewRetryState = new Map();
+const webviewRecreateState = new Map();
+const webviewLoadWatchdogs = new Map();
+
+function getCleanChromeUserAgent() {
+  return navigator.userAgent
+    .replace(/\sElectron\/[^\s]+/i, "")
+    .replace(/\sAI-Interaction-Hub\/[^\s]+/i, "");
+}
+
+function scheduleWebviewRetry(webview, reason) {
+  if (!webview || !webview.id || !webview.isConnected) return;
+
+  const tabId = webview.id;
+  const currentRetry = webviewRetryState.get(tabId) || 0;
+  if (currentRetry >= WEBVIEW_MAX_AUTO_RETRIES) {
+    console.warn(`[${tabId}] retry limit reached after ${reason}; attempting recreate.`);
+    attemptWebviewRecreate(tabId, `retry-limit (${reason})`);
+    return;
+  }
+
+  const nextRetry = currentRetry + 1;
+  webviewRetryState.set(tabId, nextRetry);
+  const delayMs = Math.min(8000, 1000 * Math.pow(2, nextRetry - 1));
+  console.warn(`[${tabId}] scheduling retry #${nextRetry} in ${delayMs}ms due to ${reason}.`);
+
+  window.setTimeout(() => {
+    const currentWebview = document.getElementById(tabId);
+    if (!currentWebview || !currentWebview.isConnected) return;
+    if (currentTabId !== tabId && !keepTabsActive) return;
+
+    try {
+      currentWebview.reloadIgnoringCache();
+    } catch (_error) {
+      currentWebview.reload();
+    }
+  }, delayMs);
+}
+
+function resetWebviewRetry(webview) {
+  if (!webview || !webview.id) return;
+  webviewRetryState.set(webview.id, 0);
+  webviewRecreateState.set(webview.id, 0);
+}
+
+function clearWebviewWatchdog(tabId) {
+  const timerId = webviewLoadWatchdogs.get(tabId);
+  if (!timerId) return;
+  window.clearTimeout(timerId);
+  webviewLoadWatchdogs.delete(tabId);
+}
+
+function startWebviewWatchdog(webview) {
+  if (!webview || !webview.id) return;
+  const tabId = webview.id;
+
+  clearWebviewWatchdog(tabId);
+  const timerId = window.setTimeout(() => {
+    const currentWebview = document.getElementById(tabId);
+    if (!currentWebview || !currentWebview.isConnected) return;
+    if (currentTabId !== tabId && !keepTabsActive) return;
+    if (currentWebview.isLoading && currentWebview.isLoading()) {
+      attemptWebviewRecreate(tabId, "watchdog-timeout");
+    }
+  }, WEBVIEW_LOAD_WATCHDOG_MS);
+  webviewLoadWatchdogs.set(tabId, timerId);
+}
+
+function attemptWebviewRecreate(tabId, reason) {
+  const currentRecreate = webviewRecreateState.get(tabId) || 0;
+  if (currentRecreate >= WEBVIEW_MAX_AUTO_RECREATES) {
+    console.warn(`[${tabId}] recreate limit reached after ${reason}.`);
+    return;
+  }
+
+  const oldWebview = document.getElementById(tabId);
+  if (!oldWebview || !oldWebview.isConnected) return;
+  const container = document.getElementById("webview-container");
+  if (!container) return;
+  if (!keepTabsActive && currentTabId !== tabId) return;
+
+  webviewRecreateState.set(tabId, currentRecreate + 1);
+  webviewRetryState.set(tabId, 0);
+  clearWebviewWatchdog(tabId);
+
+  const newWebview = createWebviewElement(tabId);
+  if (oldWebview.classList.contains("active")) {
+    newWebview.classList.add("active");
+  }
+
+  oldWebview.replaceWith(newWebview);
+  if (currentTabId === tabId) {
+    activeWebview = newWebview;
+  }
+
+  console.warn(`[${tabId}] webview recreated due to ${reason}.`);
+}
 
 function updateWindowTitleForTab(tabId) {
   if (window.electronAPI && window.electronAPI.app && window.electronAPI.app.setWindowTitle) {
@@ -258,13 +358,44 @@ function attachWebviewListeners(webview) {
   webview.addEventListener("focus", hideMenus);
   webview.addEventListener("mousedown", hideMenus);
   
+  webview.addEventListener("did-start-loading", () => {
+    startWebviewWatchdog(webview);
+  });
+
+  webview.addEventListener("did-stop-loading", () => {
+    clearWebviewWatchdog(webview.id);
+  });
+
+  webview.addEventListener("destroyed", () => {
+    clearWebviewWatchdog(webview.id);
+  });
+
   webview.addEventListener('dom-ready', () => {
     webview.setSpellCheckerLanguages(['pt-BR']);
     webview.setSpellCheckerEnabled(true);
-    
-    webview.addEventListener('context-menu', (_event, params) => {
-      window.electronAPI.app.showWebviewContextMenu(params);
-    });
+    resetWebviewRetry(webview);
+  });
+
+  webview.addEventListener('context-menu', (_event, params) => {
+    window.electronAPI.app.showWebviewContextMenu(params);
+  });
+
+  webview.addEventListener("did-fail-load", (event) => {
+    if (event.errorCode === -3) return; // ERR_ABORTED (navigation interrupted intentionally)
+    if (!event.isMainFrame) return;
+    clearWebviewWatchdog(webview.id);
+    scheduleWebviewRetry(webview, `did-fail-load (${event.errorCode})`);
+  });
+
+  webview.addEventListener("render-process-gone", (event) => {
+    clearWebviewWatchdog(webview.id);
+    const reason = event && event.details && event.details.reason ? event.details.reason : "unknown";
+    scheduleWebviewRetry(webview, `render-process-gone (${reason})`);
+  });
+
+  webview.addEventListener("unresponsive", () => {
+    clearWebviewWatchdog(webview.id);
+    scheduleWebviewRetry(webview, "unresponsive");
   });
 }
 
@@ -319,8 +450,12 @@ function createWebviewElement(tabId) {
   webview.src = config.url;
   webview.partition = config.partition;
   webview.setAttribute("allowpopups", "");
+  const cleanUserAgent = getCleanChromeUserAgent();
+
+  if (tabId === "gemini") {
+    webview.setAttribute("useragent", cleanUserAgent);
+  }
   if (tabId === "deepseek") {
-    const cleanUserAgent = navigator.userAgent.replace(/\sElectron\/[^\s]+/i, "");
     webview.setAttribute("useragent", cleanUserAgent);
     webview.setAttribute("preload", "./assets/js/deepseek-preload.js");
   }
@@ -337,6 +472,8 @@ function resetAllWebviews() {
   const container = document.getElementById("webview-container");
   if (!container) return;
 
+  webviewLoadWatchdogs.forEach((timerId) => window.clearTimeout(timerId));
+  webviewLoadWatchdogs.clear();
   container.querySelectorAll("webview").forEach((webview) => webview.remove());
   activeWebview = null;
   currentTabId = null;
@@ -354,6 +491,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   initializeAboutInfo();
+  // Remove webviews estáticas do HTML para evitar instâncias duplicadas/IDs duplicados.
+  resetAllWebviews();
   applyAppMode();
 
   // Carregar primeira aba disponível do modo atual

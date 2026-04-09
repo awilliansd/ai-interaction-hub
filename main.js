@@ -33,6 +33,7 @@ if (!gotTheLock) {
   const createWindowWithOptions = (settings) => windowManager.createWindow(app, settings);
   appLifecycle.initializeAppLifecycle(app, createWindowWithOptions, settingsManager);
   const deepseekUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
+  const geminiUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
 
   // Handler IPC para obter o User-Agent do Grok
   ipcMain.handle('get-grok-user-agent', () => {
@@ -77,6 +78,7 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     // Flags de linha de comando essenciais
     app.commandLine.appendSwitch('lang', 'pt-BR');
+    app.commandLine.appendSwitch('accept-lang', 'pt-BR');
 
     // Intercepta e modifica o cabeçalho Accept-Language
     session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -97,6 +99,30 @@ if (!gotTheLock) {
           contents.session.webRequest.onBeforeSendHeaders({ urls: ['*://*.deepseek.com/*'] }, (details, callback) => {
             const requestHeaders = details.requestHeaders;
             requestHeaders['User-Agent'] = deepseekUserAgent;
+            callback({ requestHeaders });
+          });
+          contents.session.webRequest.onBeforeSendHeaders({
+            urls: [
+              '*://gemini.google.com/*',
+              '*://accounts.google.com/*',
+              '*://*.google.com/*',
+              '*://*.googleapis.com/*',
+              '*://*.gstatic.com/*'
+            ]
+          }, (details, callback) => {
+            const requestHeaders = details.requestHeaders || {};
+            requestHeaders['User-Agent'] = geminiUserAgent;
+            requestHeaders['Accept'] = requestHeaders['Accept'] || 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+            requestHeaders['Accept-Language'] = 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7';
+
+            if (details.resourceType === 'mainFrame' || details.resourceType === 'subFrame') {
+              requestHeaders['Sec-Fetch-Dest'] = 'document';
+              requestHeaders['Sec-Fetch-Mode'] = 'navigate';
+              requestHeaders['Sec-Fetch-Site'] = 'none';
+              requestHeaders['Sec-Fetch-User'] = '?1';
+            }
+
+            delete requestHeaders['X-Requested-With'];
             callback({ requestHeaders });
           });
           configuredWebviewSessions.add(contents.session);
