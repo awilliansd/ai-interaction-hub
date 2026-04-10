@@ -1,6 +1,6 @@
 {
   "name": "ai-interaction-hub",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "Hub unificado para múltiplos chats de IA",
   "author": "Alessandro Willian",
   "main": "main.js",
@@ -12,10 +12,10 @@
     "test": "jest"
   },
   "devDependencies": {
-    "electron": "^39.8.3",
+    "electron": "^39.8.7",
     "electron-builder": "^26.0.12",
-    "jest": "^30.2.0",
-    "sharp": "^0.32.1"
+    "jest": "^30.3.0",
+    "sharp": "^0.34.5"
   },
   "build": {
     "appId": "com.alessandrowillian.aiinteractionhub",
