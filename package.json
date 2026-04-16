@@ -42,8 +42,7 @@
     },
     "files": [
       "**/*",
-      "!dist/",
-      "!node_modules/"
+      "!dist/"
     ],
     "extraResources": [
       {
