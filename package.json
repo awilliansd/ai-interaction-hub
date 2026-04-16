@@ -8,6 +8,7 @@
     "start": "electron .",
     "predist": "npm run generate-icons",
     "dist": "electron-builder",
+    "release": "electron-builder --publish always",
     "generate-icons": "node scripts/generate-icons.js",
     "test": "jest"
   },
@@ -52,6 +53,18 @@
           "**/*"
         ]
       }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "awilliansd",
+        "repo": "ai-interaction-hub",
+        "releaseType": "release"
+      }
     ]
+  },
+  "dependencies": {
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.8.3"
   }
 }

@@ -17,7 +17,7 @@ function sendCommandToRenderer(command) {
   }
 }
 
-function createWindow(app, settings) {
+function createWindow(app, settings, actions = {}) {
   if (!app) {
     throw new Error("WindowManager: Instância do 'app' do Electron é necessária.");
   }
@@ -134,6 +134,15 @@ function createWindow(app, settings) {
     {
       label: 'Ajuda',
       submenu: [
+        {
+          label: 'Verificar Atualizações',
+          click: () => {
+            if (typeof actions.checkForUpdates === "function") {
+              actions.checkForUpdates(true);
+            }
+          }
+        },
+        { type: 'separator' },
         {
           label: 'Sobre',
           click: () => sendCommandToRenderer('command:show-about')
