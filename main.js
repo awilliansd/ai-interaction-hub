@@ -8,6 +8,7 @@ const trayManager = require("./modules/trayManager");
 const ipcHandlers = require("./modules/ipcHandlers");
 const settingsManager = require("./modules/settingsManager");
 const appLifecycle = require("./modules/appLifecycle");
+const updaterManager = require("./modules/updaterManager");
 const configuredWebviewSessions = new WeakSet();
 
 // --- Implementação do Single Instance Lock ---
@@ -30,7 +31,13 @@ if (!gotTheLock) {
   const initialSettings = settingsManager.loadSettings();
 
   // Inicializa o ciclo de vida da aplicação
-  const createWindowWithOptions = (settings) => windowManager.createWindow(app, settings);
+  let updaterApi = {
+    checkForUpdates: async () => {}
+  };
+  const createWindowWithOptions = (settings) =>
+    windowManager.createWindow(app, settings, {
+      checkForUpdates: (userInitiated = false) => updaterApi.checkForUpdates(userInitiated)
+    });
   appLifecycle.initializeAppLifecycle(app, createWindowWithOptions, settingsManager);
   const deepseekUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
 
@@ -85,7 +92,7 @@ if (!gotTheLock) {
     });
 
     // Cria a janela principal
-    const mainWindow = windowManager.createWindow(app, initialSettings);
+    const mainWindow = createWindowWithOptions(initialSettings);
 
     // Configuração de segurança para WebContents
     app.on('web-contents-created', (event, contents) => {
@@ -118,11 +125,14 @@ if (!gotTheLock) {
 
     // Inicializa os manipuladores IPC
     ipcHandlers.initializeIpcHandlers(mainWindow, app, settingsManager);
+
+    // Inicializa o auto-update (somente app empacotado)
+    updaterApi = updaterManager.initializeAutoUpdater(app, () => windowManager.getMainWindow());
   });
 
   app.on("activate", () => {
     if (windowManager.getMainWindow() === null) {
-      windowManager.createWindow(app, settingsManager.loadSettings());
+      createWindowWithOptions(settingsManager.loadSettings());
     }
   });
 }
