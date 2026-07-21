@@ -16,6 +16,7 @@
   - Grok
   - Manus
   - Kimi
+  - Qwen Chat
   - Z.ai
   - Microsoft Copilot
   - Meta AI

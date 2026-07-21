@@ -13,6 +13,7 @@ const tabConfigs = {
   perplexity: { url: "https://www.perplexity.ai", partition: "persist:perplexity" },
   kimi: { url: "https://www.kimi.com/", partition: "persist:kimi" },
   zai: { url: "https://chat.z.ai/", partition: "persist:zai" },
+  qwen: { url: "https://chat.qwen.ai/", partition: "persist:qwen" },
 };
 
 const tabLabels = {
@@ -29,6 +30,7 @@ const tabLabels = {
   perplexity: "Perplexity",
   kimi: "Kimi",
   zai: "Z.ai",
+  qwen: "Qwen Chat",
 };
 
 const APP_MODES = {
@@ -46,6 +48,7 @@ const personalTabs = [
   "metaai",
   "perplexity",
   "kimi",
+  "qwen",
 ];
 
 const developerTabs = ["claude", "manus", "replit", "groq", "zai"];
