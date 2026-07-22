@@ -226,16 +226,17 @@ describe('ipcHandlers', () => {
     });
 
     it('deve registrar o handler para save-settings e salvar as configurações', () => {
+      mockSettingsManager.saveSettings.mockReturnValue(true);
       ipcHandlers.initializeIpcHandlers(mockMainWindow, mockApp, mockSettingsManager);
 
       // Encontra o handler registrado para 'save-settings'
       const saveSettingsHandler = ipcMain.handle.mock.calls.find(call => call[0] === 'save-settings')[1];
-      
+
       // Executa o handler com configurações de exemplo
       const settings = { theme: 'light', language: 'en-US' };
       const result = saveSettingsHandler({}, settings);
-      
-      // Verifica se as configurações foram salvas e o resultado é verdadeiro
+
+      // O handler repassa o booleano de sucesso retornado pelo settingsManager
       expect(mockSettingsManager.saveSettings).toHaveBeenCalledWith(settings);
       expect(result).toBe(true);
     });

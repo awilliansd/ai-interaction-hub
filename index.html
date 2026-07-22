@@ -3,9 +3,9 @@
 
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-src https:; child-src https:; connect-src 'self'" />
   <title>AI Interaction Hub</title>
   <link rel="stylesheet" href="assets/css/style.css">
-  <script src="assets/js/renderer.js"></script>
 </head>
 
 <body>
@@ -21,11 +21,11 @@
   <!-- Modal Configurações -->
   <div id="settings-modal" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="hideSettings()">&times;</span>
+      <span class="close" data-close="settings">&times;</span>
       <h2>Configurações</h2>
       <div class="setting-item">
         <label class="setting-label">
-          <input type="checkbox" id="minimize-to-tray" onchange="toggleMinimizeToTray()">
+          <input type="checkbox" id="minimize-to-tray">
           <span class="checkmark"></span>
           Minimizar para a bandeja do sistema
         </label>
@@ -33,7 +33,7 @@
       </div>
       <div class="setting-item">
         <label class="setting-label">
-          <input type="checkbox" id="keep-tabs-active" onchange="toggleKeepTabsActive()">
+          <input type="checkbox" id="keep-tabs-active">
           <span class="checkmark"></span>
           Manter Abas Ativas (Modo de Alta Performance)
         </label>
@@ -41,7 +41,7 @@
       </div>
       <div class="setting-item">
         <p class="setting-title">Modo da aplicação</p>
-        <select id="app-mode" class="setting-select" onchange="toggleAppMode()">
+        <select id="app-mode" class="setting-select">
           <option value="personal">Pessoal</option>
           <option value="developer">Desenvolvedor</option>
         </select>
@@ -59,83 +59,36 @@
 
   <!-- Menu de Contexto das Abas -->
   <div id="tab-context-menu" class="context-menu">
-    <div class="context-option" onclick="reloadCurrentTab()">Recarregar</div>
+    <div class="context-option" id="ctx-reload">Recarregar</div>
   </div>
 
   <!-- Modal Sobre -->
   <div id="about-modal" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="hideAbout()">&times;</span>
+      <span class="close" data-close="about">&times;</span>
       <h2>AI Interaction Hub</h2>
       <p><strong>Desenvolvido por:</strong> [Alessandro Willian]</p>
       <p><strong>Ano:</strong> <span id="current-year"></span></p>
       <p><strong>Versão:</strong> <span id="app-version">...</span></p>
-      <p><strong>GitHub:</strong> <a href="#" onclick="openGitHub()" class="github-link">github.com/awilliansd</a></p>
+      <p><strong>GitHub:</strong> <a id="github-link" href="#" class="github-link">github.com/awilliansd</a></p>
       <p>Uma interface unificada para interagir com múltiplos assistentes de IA.</p>
     </div>
   </div>
 
   <div id="main-content">
     <div id="sidebar">
-      <div class="sidebar-top">
-        <button id="btn-gemini" onclick="showTab('gemini')" oncontextmenu="showTabContextMenu(event, 'gemini')">
-          <img src="assets/icons/gemini.png" alt="Gemini" width="32" height="32">
-        </button>
-        <button id="btn-chatgpt" onclick="showTab('chatgpt')" oncontextmenu="showTabContextMenu(event, 'chatgpt')">
-          <img src="assets/icons/chatgpt.png" alt="ChatGPT" width="32" height="32">
-        </button>
-        <button id="btn-claude" onclick="showTab('claude')" oncontextmenu="showTabContextMenu(event, 'claude')">
-          <img src="assets/icons/claude.png" alt="Claude" width="32" height="32">
-        </button>
-        <button id="btn-deepseek" onclick="showTab('deepseek')" oncontextmenu="showTabContextMenu(event, 'deepseek')">
-          <img src="assets/icons/deepseek.png" alt="DeepSeek" width="32" height="32">
-        </button>
-        <button id="btn-manus" onclick="showTab('manus')" oncontextmenu="showTabContextMenu(event, 'manus')" data-mode="developer">
-          <img src="assets/icons/manus.png" alt="Manus" width="32" height="32">
-        </button>
-        <button id="btn-grok" onclick="showTab('grok')" oncontextmenu="showTabContextMenu(event, 'grok')">
-          <img src="assets/icons/grok.png" alt="Grok" width="32" height="32">
-        </button>
-        <button id="btn-kimi" onclick="showTab('kimi')"
-          oncontextmenu="showTabContextMenu(event, 'kimi')">
-          <img src="assets/icons/kimi.png" alt="Kimi" width="32" height="32">
-        </button>
-        <button id="btn-qwen" onclick="showTab('qwen')"
-          oncontextmenu="showTabContextMenu(event, 'qwen')">
-          <img src="assets/icons/qwen.png" alt="Qwen Chat" width="32" height="32">
-        </button>
-        <button id="btn-zai" onclick="showTab('zai')"
-          oncontextmenu="showTabContextMenu(event, 'zai')" data-mode="developer">
-          <img src="assets/icons/zai.svg" alt="Z.ai" width="32" height="32">
-        </button>
-        <button id="btn-replit" class="text-icon" onclick="showTab('replit')" oncontextmenu="showTabContextMenu(event, 'replit')" data-mode="developer">
-          <img src="assets/icons/replit.ico" alt="Replit" width="32" height="32">
-        </button>
-        <button id="btn-groq" class="text-icon" onclick="showTab('groq')" oncontextmenu="showTabContextMenu(event, 'groq')" data-mode="developer" title="Groq">
-          <img src="assets/icons/groq.ico" alt="Groq" width="32" height="32">
-        </button>
-        <button id="btn-copilot" onclick="showTab('copilot')" oncontextmenu="showTabContextMenu(event, 'copilot')">
-          <img src="assets/icons/mscopilot.png" alt="MS Copilot" width="32" height="32">
-        </button>
-        <button id="btn-metaai" onclick="showTab('metaai')" oncontextmenu="showTabContextMenu(event, 'metaai')">
-          <img src="assets/icons/metaai.png" alt="Meta AI" width="32" height="32">
-        </button>
-        <button id="btn-perplexity" onclick="showTab('perplexity')"
-          oncontextmenu="showTabContextMenu(event, 'perplexity')">
-          <img src="assets/icons/perplexity.png" alt="Perplexity" width="32" height="32">
-        </button>
-      </div>
+      <div class="sidebar-top" id="sidebar-top"></div>
 
       <div class="sidebar-bottom">
-        <button id="btn-app-mode" class="text-icon" onclick="cycleAppMode()" title="Alternar modo: Pessoal">
+        <button id="btn-app-mode" class="text-icon" title="Alternar modo: Pessoal">
           <span id="app-mode-indicator">P</span>
         </button>
-        <button id="btn-clear-cache" onclick="clearAppCache()" title="Limpar Cache e Reiniciar" style="margin-bottom: 10px;">
+        <button id="btn-clear-cache" title="Limpar Cache e Reiniciar" style="margin-bottom: 10px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
             <path d="M19.36 2.72l1.42 1.42-1.42 1.42-1.42-1.42 1.42-1.42m-14.72 0l1.42 1.42-1.42 1.42-1.42-1.42 1.42-1.42M12 6c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8m0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6m0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/>
           </svg>
         </button>
-        <button id="btn-settings" onclick="showSettings()" title="Configurações">
+        <button id="btn-settings" title="Configurações">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
             <path
               d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" />
@@ -144,14 +97,10 @@
       </div>
     </div>
 
-     <div id="webview-container"></div></div>
-
-    <!-- Menu de Contexto Genérico (parece não usado) -->
-    <div id="context-menu" style="display: none; position: absolute; z-index: 1000;" class="context-menu">
-      <div class="context-option" onclick="closeCurrentTab()">Fechar</div>
-      <div class="context-option" onclick="duplicateCurrentTab()">Duplicar</div>
-    </div>
+    <div id="webview-container"></div>
   </div>
+
+  <script type="module" src="assets/js/renderer.js"></script>
 </body>
 
 </html>

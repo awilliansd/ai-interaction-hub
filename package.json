@@ -1,9 +1,13 @@
 {
   "name": "ai-interaction-hub",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Hub unificado para múltiplos chats de IA",
   "author": "Alessandro Willian",
   "main": "main.js",
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  },
   "scripts": {
     "start": "electron .",
     "predist": "npm run generate-icons",
@@ -13,10 +17,10 @@
     "test": "jest"
   },
   "devDependencies": {
-    "electron": "^39.8.7",
-    "electron-builder": "^26.0.12",
-    "jest": "^30.3.0",
-    "sharp": "^0.34.5"
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
+    "jest": "^30.4.2",
+    "sharp": "^0.35.3"
   },
   "build": {
     "appId": "com.alessandrowillian.aiinteractionhub",
@@ -63,7 +67,11 @@
     ]
   },
   "dependencies": {
-    "electron-log": "^5.4.3",
-    "electron-updater": "^6.8.3"
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9"
+  },
+  "allowScripts": {
+    "electron@39.8.7": true,
+    "sharp@0.34.5": true
   }
 }

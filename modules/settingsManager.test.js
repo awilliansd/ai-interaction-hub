@@ -55,14 +55,15 @@ describe('settingsManager', () => {
       fs.readFileSync.mockReturnValue(JSON.stringify(settings));
 
       const loadedSettings = settingsManager.loadSettings();
-      expect(loadedSettings).toEqual(settings);
+      // Valores ausentes são preenchidos com os defaults (merge normalizado)
+      expect(loadedSettings).toEqual({ minimizeToTray: true, keepTabsActive: false, appMode: "personal" });
     });
 
     it('deve retornar as configurações padrão se o arquivo não existir', () => {
       fs.existsSync.mockReturnValue(false);
 
       const loadedSettings = settingsManager.loadSettings();
-      expect(loadedSettings).toEqual({ minimizeToTray: false, keepTabsActive: false });
+      expect(loadedSettings).toEqual({ minimizeToTray: false, keepTabsActive: false, appMode: "personal" });
     });
 
     it('deve retornar as configurações padrão se ocorrer um erro de parse', () => {
@@ -81,7 +82,7 @@ describe('settingsManager', () => {
       consoleErrorSpy.mockRestore();
 
       // Lembre-se de usar a correção do objeto padrão aqui também:
-      expect(loadedSettings).toEqual({ minimizeToTray: false, keepTabsActive: false });
+      expect(loadedSettings).toEqual({ minimizeToTray: false, keepTabsActive: false, appMode: "personal" });
     });
   });
 
@@ -91,16 +92,29 @@ describe('settingsManager', () => {
     });
 
     it('deve salvar as configurações no arquivo correto', () => {
-      const settings = { minimizeToTray: true, anotherSetting: 'value' };
+      const settings = { minimizeToTray: true, keepTabsActive: true, appMode: "developer" };
       const expectedPath = path.join(mockApp.getPath('userData'), 'settings.json');
 
-      settingsManager.saveSettings(settings);
+      const result = settingsManager.saveSettings(settings);
 
+      // Apenas as chaves conhecidas são persistidas (normalização/schema)
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         expectedPath,
         JSON.stringify(settings, null, 2),
         'utf-8'
       );
+      expect(result).toBe(true);
+    });
+
+    it('deve ignorar chaves desconhecidas ao salvar', () => {
+      const settings = { minimizeToTray: true, unknownKey: 'value' };
+      const expectedPath = path.join(mockApp.getPath('userData'), 'settings.json');
+
+      settingsManager.saveSettings(settings);
+
+      const writtenArgs = fs.writeFileSync.mock.calls.find(c => c[0] === expectedPath);
+      const persisted = JSON.parse(writtenArgs[1]);
+      expect(persisted).toEqual({ minimizeToTray: true, keepTabsActive: false, appMode: "personal" });
     });
   });
 });

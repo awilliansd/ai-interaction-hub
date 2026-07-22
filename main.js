@@ -1,6 +1,6 @@
 // main.js
-const { app, session, Menu, MenuItem, ipcMain } = require("electron");
-const path = require("path");
+const { app, session, ipcMain } = require("electron");
+const log = require("electron-log");
 
 // Importa os módulos
 const windowManager = require("./modules/windowManager");
@@ -9,7 +9,8 @@ const ipcHandlers = require("./modules/ipcHandlers");
 const settingsManager = require("./modules/settingsManager");
 const appLifecycle = require("./modules/appLifecycle");
 const updaterManager = require("./modules/updaterManager");
-const configuredWebviewSessions = new WeakSet();
+const webviewHost = require("./modules/webviewHost");
+const Channels = require("./modules/ipc-channels");
 
 // --- Implementação do Single Instance Lock ---
 const gotTheLock = app.requestSingleInstanceLock();
@@ -18,7 +19,7 @@ if (!gotTheLock) {
   console.log("Outra instância já está rodando. Fechando esta.");
   app.quit();
 } else {
-  app.on("second-instance", (_event, _commandLine, _workingDirectory) => {
+  app.on("second-instance", () => {
     console.log("Tentativa de abrir segunda instância detectada.");
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow) {
@@ -31,59 +32,19 @@ if (!gotTheLock) {
   const initialSettings = settingsManager.loadSettings();
 
   // Inicializa o ciclo de vida da aplicação
-  let updaterApi = {
-    checkForUpdates: async () => {}
-  };
+  let updaterApi = { checkForUpdates: async () => {} };
   const createWindowWithOptions = (settings) =>
     windowManager.createWindow(app, settings, {
       checkForUpdates: (userInitiated = false) => updaterApi.checkForUpdates(userInitiated)
     });
   appLifecycle.initializeAppLifecycle(app, createWindowWithOptions, settingsManager);
-  const deepseekUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
-
-  // Handler IPC para obter o User-Agent do Grok
-  ipcMain.handle('get-grok-user-agent', () => {
-    return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
-  });
-
-  // Handler IPC para mostrar o menu de contexto da webview
-  ipcMain.handle('show-webview-context-menu', (_event, params) => {
-    const menu = new Menu();
-    if (params.misspelledWord) {
-      for (const suggestion of params.dictionarySuggestions) {
-        menu.append(new MenuItem({
-          label: suggestion,
-          click: () => _event.sender.replaceMisspelling(suggestion)
-        }));
-      }
-      if (params.dictionarySuggestions.length > 0) {
-        menu.append(new MenuItem({ type: 'separator' }));
-      }
-      menu.append(new MenuItem({
-        label: 'Adicionar ao dicionário',
-        click: () => _event.sender.session.addWordToSpellCheckerDictionary(params.misspelledWord)
-      }));
-      menu.append(new MenuItem({ type: 'separator' }));
-    }
-    if (params.isEditable) {
-      if (params.selectionText) {
-        menu.append(new MenuItem({ role: 'cut', label: 'Recortar' }));
-        menu.append(new MenuItem({ role: 'copy', label: 'Copiar' }));
-      }
-      menu.append(new MenuItem({ role: 'paste', label: 'Colar' }));
-      menu.append(new MenuItem({ type: 'separator' }));
-    }
-    if (params.selectionText) {
-      menu.append(new MenuItem({ role: 'copy', label: 'Copiar' }));
-      menu.append(new MenuItem({ type: 'separator' }));
-    }
-    menu.append(new MenuItem({ role: 'selectAll', label: 'Selecionar tudo' }));
-    menu.popup();
-  });
 
   app.whenReady().then(() => {
     // Flags de linha de comando essenciais
     app.commandLine.appendSwitch('lang', 'pt-BR');
+    // Impede o flag "navigator.webdriver" de ser definido nas pages (real fix
+    // para detecção de automação, substituindo o preload contextIsolated).
+    app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
 
     // Intercepta e modifica o cabeçalho Accept-Language
     session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -94,22 +55,20 @@ if (!gotTheLock) {
     // Cria a janela principal
     const mainWindow = createWindowWithOptions(initialSettings);
 
-    // Configuração de segurança para WebContents
-    app.on('web-contents-created', (event, contents) => {
-      if (contents.getType() === 'webview') {
-        contents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
-          callback(true); // Permitir permissões para WebViews
-        });
-        if (!configuredWebviewSessions.has(contents.session)) {
-          contents.session.webRequest.onBeforeSendHeaders({ urls: ['*://*.deepseek.com/*'] }, (details, callback) => {
-            const requestHeaders = details.requestHeaders;
-            requestHeaders['User-Agent'] = deepseekUserAgent;
-            callback({ requestHeaders });
-          });
-          configuredWebviewSessions.add(contents.session);
-        }
-      }
-    });
+    // Inicializa o host de WebContentsView (E1)
+    webviewHost.initializeHost(mainWindow);
+
+    // Registra canais do host
+    ipcMain.on(Channels.HOST_SHOW_TAB, (_e, payload) => webviewHost.showTab(payload));
+    ipcMain.on(Channels.HOST_RELOAD_TAB, (_e, payload) => webviewHost.reloadTab(payload));
+    ipcMain.on(Channels.HOST_RECREATE_TAB, (_e, payload) => webviewHost.recreateTab(payload));
+    ipcMain.on(Channels.HOST_RESET_ALL, () => webviewHost.destroyAllTabs());
+    ipcMain.on(Channels.HOST_SET_OVERLAY, (_e, active) => webviewHost.setOverlay(active));
+    ipcMain.on(Channels.HOST_FIND_OPEN, (_e, payload) => webviewHost.findOpen(payload));
+    ipcMain.on(Channels.HOST_FIND_INPUT, (_e, payload) => webviewHost.findInput(payload));
+    ipcMain.on(Channels.HOST_FIND_NEXT, (_e, payload) => webviewHost.findNext(payload));
+    ipcMain.on(Channels.HOST_FIND_CLOSE, (_e, payload) => webviewHost.findClose(payload));
+    ipcMain.on(Channels.HOST_CLEAR_TAB_CACHE, (_e, payload) => webviewHost.clearTabCache(payload));
 
     // Adiciona o manipulador de evento 'close'
     mainWindow.on("close", (event) => {

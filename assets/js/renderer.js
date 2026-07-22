@@ -1,83 +1,55 @@
-// Configuração das abas
-const tabConfigs = {
-  gemini: { url: "https://gemini.google.com/app", partition: "persist:gemini" },
-  chatgpt: { url: "https://chat.openai.com", partition: "persist:chatgpt" },
-  claude: { url: "https://claude.ai", partition: "persist:claude" },
-  deepseek: { url: "https://chat.deepseek.com", partition: "persist:deepseek" },
-  grok: { url: "https://grok.com", partition: "persist:grok" },
-  manus: { url: "https://manus.im/app", partition: "persist:manus" },
-  replit: { url: "https://replit.com/", partition: "persist:replit" },
-  groq: { url: "https://console.groq.com/playground", partition: "persist:groq" },
-  copilot: { url: "https://copilot.microsoft.com", partition: "persist:copilot" },
-  metaai: { url: "https://www.meta.ai", partition: "persist:metaai" },
-  perplexity: { url: "https://www.perplexity.ai", partition: "persist:perplexity" },
-  kimi: { url: "https://www.kimi.com/", partition: "persist:kimi" },
-  zai: { url: "https://chat.z.ai/", partition: "persist:zai" },
-  qwen: { url: "https://chat.qwen.ai/", partition: "persist:qwen" },
-};
+// assets/js/renderer.js (ES module)
+// Renderer passou a comandar o host de WebContentsView (processo principal).
+// Não há mais <webview> no DOM; a UI cuida apenas de sidebar, modais, find bar e
+// indicadores de carregamento/recuperação.
+import { TAB_CONFIGS, TAB_BY_ID, APP_MODES, getTabsByMode, getAllowedTabIds, DEFAULT_SETTINGS } from "./tabs.config.js";
 
-const tabLabels = {
-  gemini: "Gemini",
-  chatgpt: "ChatGPT",
-  claude: "Claude",
-  deepseek: "DeepSeek",
-  grok: "Grok",
-  manus: "Manus",
-  replit: "Replit",
-  groq: "Groq",
-  copilot: "MS Copilot",
-  metaai: "Meta AI",
-  perplexity: "Perplexity",
-  kimi: "Kimi",
-  zai: "Z.ai",
-  qwen: "Qwen Chat",
-};
-
-const APP_MODES = {
-  PERSONAL: "personal",
-  DEVELOPER: "developer",
-};
-
-const personalTabs = [
-  "gemini",
-  "chatgpt",
-  "claude",
-  "deepseek",
-  "grok",
-  "copilot",
-  "metaai",
-  "perplexity",
-  "kimi",
-  "qwen",
-];
-
-const developerTabs = ["claude", "manus", "replit", "groq", "zai"];
-
-const tabsByMode = {
-  [APP_MODES.PERSONAL]: personalTabs,
-  [APP_MODES.DEVELOPER]: developerTabs,
-};
-
-let activeWebview = null;
+// --- Estado de runtime ---
 let currentTabId = null;
-let keepTabsActive = localStorage.getItem("keepTabsActive") === "true";
-let minimizeToTray = localStorage.getItem("minimizeToTray") === "true";
-let appMode = localStorage.getItem("appMode") === APP_MODES.DEVELOPER ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
-const WEBVIEW_MAX_AUTO_RETRIES = 3;
-const WEBVIEW_MAX_AUTO_RECREATES = 1;
-const WEBVIEW_LOAD_WATCHDOG_MS = 75000;
-const WEBVIEW_RECOVERY_TOAST_MS = 4500;
-const webviewRetryState = new Map();
-const webviewRecreateState = new Map();
-const webviewLoadWatchdogs = new Map();
-let recoveryToastEl = null;
+let minimizeToTray = DEFAULT_SETTINGS.minimizeToTray;
+let keepTabsActive = DEFAULT_SETTINGS.keepTabsActive;
+let appMode = DEFAULT_SETTINGS.appMode;
+let overlayActive = false;
+let settingsReady = false;
 
+// --- Find in page ---
+let findBarEl = null;
+let findInputEl = null;
+let findResultsEl = null;
+let findActive = false;
+
+// --- Toast de recuperação ---
+let recoveryToastEl = null;
+const WEBVIEW_RECOVERY_TOAST_MS = 4500;
+
+// --- Helpers de config ---
+function tabLabel(id) { return (TAB_BY_ID[id] && TAB_BY_ID[id].label) || id; }
+function getAllowedTabs() { return getTabsByMode(appMode); }
+function isTabAllowed(tabId) { return getAllowedTabs().some((t) => t.id === tabId); }
+
+// User-Agent "limpo" para abas que pedem (ex: DeepSeek).
 function getCleanChromeUserAgent() {
   return navigator.userAgent
     .replace(/\sElectron\/[^\s]+/i, "")
     .replace(/\sAI-Interaction-Hub\/[^\s]+/i, "");
 }
 
+// Constrói o descritor enviado ao webviewHost (main).
+function buildHostTab(tabId) {
+  const tab = TAB_BY_ID[tabId];
+  if (!tab) return null;
+  const descriptor = {
+    id: tab.id,
+    label: tab.label,
+    url: tab.url,
+    partition: tab.partition,
+  };
+  if (tab.preload) descriptor.preload = tab.preload;
+  if (tab.userAgent === "clean-chrome") descriptor.userAgent = getCleanChromeUserAgent();
+  return descriptor;
+}
+
+// --- Toast ---
 function showWebviewRecoveryToast(message) {
   if (!message) return;
   if (!recoveryToastEl) {
@@ -99,143 +71,35 @@ function showWebviewRecoveryToast(message) {
     recoveryToastEl.style.transition = "opacity 0.18s ease";
     document.body.appendChild(recoveryToastEl);
   }
-
   recoveryToastEl.textContent = message;
   recoveryToastEl.style.opacity = "1";
-
-  if (recoveryToastEl._hideTimer) {
-    window.clearTimeout(recoveryToastEl._hideTimer);
-  }
+  if (recoveryToastEl._hideTimer) window.clearTimeout(recoveryToastEl._hideTimer);
   recoveryToastEl._hideTimer = window.setTimeout(() => {
     if (recoveryToastEl) recoveryToastEl.style.opacity = "0";
   }, WEBVIEW_RECOVERY_TOAST_MS);
 }
 
-function scheduleWebviewRetry(webview, reason) {
-  if (!webview || !webview.id || !webview.isConnected) return;
-
-  const tabId = webview.id;
-  const currentRetry = webviewRetryState.get(tabId) || 0;
-  if (currentRetry >= WEBVIEW_MAX_AUTO_RETRIES) {
-    // Evita recriar agressivamente em erros de carga comuns; tenta apenas em travamento/crash.
-    const shouldRecreate = reason.includes("render-process-gone") || reason.includes("watchdog-timeout");
-    if (shouldRecreate) {
-      console.warn(`[${tabId}] retry limit reached after ${reason}; attempting recreate.`);
-      attemptWebviewRecreate(tabId, `retry-limit (${reason})`);
-    } else {
-      console.warn(`[${tabId}] retry limit reached after ${reason}.`);
-      showWebviewRecoveryToast(`${tabLabels[tabId] || tabId}: conexão instável. Tente recarregar a aba.`);
-    }
-    return;
-  }
-
-  const nextRetry = currentRetry + 1;
-  webviewRetryState.set(tabId, nextRetry);
-  const delayMs = Math.min(8000, 1000 * Math.pow(2, nextRetry - 1));
-  console.warn(`[${tabId}] scheduling retry #${nextRetry} in ${delayMs}ms due to ${reason}.`);
-
-  window.setTimeout(() => {
-    const currentWebview = document.getElementById(tabId);
-    if (!currentWebview || !currentWebview.isConnected) return;
-    if (currentTabId !== tabId && !keepTabsActive) return;
-
-    try {
-      currentWebview.reloadIgnoringCache();
-    } catch (_error) {
-      currentWebview.reload();
-    }
-  }, delayMs);
+// --- Overlay (modais/find bar): avisa o host para esconder a IA ativa ---
+function setOverlay(active) {
+  overlayActive = active;
+  window.electronAPI?.tabs?.setOverlay?.(active);
 }
 
-function resetWebviewRetry(webview) {
-  if (!webview || !webview.id) return;
-  webviewRetryState.set(webview.id, 0);
-  webviewRecreateState.set(webview.id, 0);
-}
-
-function clearWebviewWatchdog(tabId) {
-  const timerId = webviewLoadWatchdogs.get(tabId);
-  if (!timerId) return;
-  window.clearTimeout(timerId);
-  webviewLoadWatchdogs.delete(tabId);
-}
-
-function startWebviewWatchdog(webview) {
-  if (!webview || !webview.id) return;
-  const tabId = webview.id;
-
-  clearWebviewWatchdog(tabId);
-  const timerId = window.setTimeout(() => {
-    const currentWebview = document.getElementById(tabId);
-    if (!currentWebview || !currentWebview.isConnected) return;
-    if (currentTabId !== tabId && !keepTabsActive) return;
-    if (currentWebview.isLoading && currentWebview.isLoading()) {
-      attemptWebviewRecreate(tabId, "watchdog-timeout");
-    }
-  }, WEBVIEW_LOAD_WATCHDOG_MS);
-  webviewLoadWatchdogs.set(tabId, timerId);
-}
-
-function attemptWebviewRecreate(tabId, reason) {
-  const currentRecreate = webviewRecreateState.get(tabId) || 0;
-  if (currentRecreate >= WEBVIEW_MAX_AUTO_RECREATES) {
-    console.warn(`[${tabId}] recreate limit reached after ${reason}.`);
-    return;
-  }
-
-  const oldWebview = document.getElementById(tabId);
-  if (!oldWebview || !oldWebview.isConnected) return;
-  const container = document.getElementById("webview-container");
-  if (!container) return;
-  if (!keepTabsActive && currentTabId !== tabId) return;
-
-  webviewRecreateState.set(tabId, currentRecreate + 1);
-  webviewRetryState.set(tabId, 0);
-  clearWebviewWatchdog(tabId);
-
-  const newWebview = createWebviewElement(tabId);
-  if (oldWebview.classList.contains("active")) {
-    newWebview.classList.add("active");
-  }
-
-  oldWebview.replaceWith(newWebview);
-  if (currentTabId === tabId) {
-    activeWebview = newWebview;
-  }
-
-  console.warn(`[${tabId}] webview recreated due to ${reason}.`);
-  showWebviewRecoveryToast(`${tabLabels[tabId] || tabId}: sessão reiniciada para recuperação.`);
-}
-
+// --- Título da janela ---
 function updateWindowTitleForTab(tabId) {
-  if (window.electronAPI && window.electronAPI.app && window.electronAPI.app.setWindowTitle) {
-    const tabName = tabLabels[tabId] || tabId;
-    window.electronAPI.app.setWindowTitle(tabName);
-  }
+  window.electronAPI?.app?.setWindowTitle?.(tabLabel(tabId));
 }
-
 function updateWindowTitleForCurrentTab() {
-  const tabId = currentTabId || getAllowedTabs()[0];
+  const tabId = currentTabId || getAllowedTabs()[0]?.id;
   if (tabId) updateWindowTitleForTab(tabId);
 }
 
-function getAllowedTabs() {
-  return tabsByMode[appMode] || tabsByMode[APP_MODES.PERSONAL];
-}
-
-function isTabAllowed(tabId) {
-  return getAllowedTabs().includes(tabId);
-}
-
+// --- Modo da aplicação ---
 function updateAppModeControls() {
   const appModeSelect = document.getElementById("app-mode");
   if (appModeSelect) appModeSelect.value = appMode;
-
   const appModeIndicator = document.getElementById("app-mode-indicator");
-  if (appModeIndicator) {
-    appModeIndicator.textContent = appMode === APP_MODES.DEVELOPER ? "D" : "P";
-  }
-
+  if (appModeIndicator) appModeIndicator.textContent = appMode === APP_MODES.DEVELOPER ? "D" : "P";
   const modeButton = document.getElementById("btn-app-mode");
   if (modeButton) {
     const modeLabel = appMode === APP_MODES.DEVELOPER ? "Desenvolvedor" : "Pessoal";
@@ -244,62 +108,82 @@ function updateAppModeControls() {
 }
 
 function applyAppMode() {
-  const allowedTabs = getAllowedTabs();
-
+  const allowedIds = getAllowedTabs().map((t) => t.id);
   document.querySelectorAll("#sidebar .sidebar-top button[id^='btn-']").forEach((button) => {
     const tabId = button.id.replace("btn-", "");
-    button.style.display = allowedTabs.includes(tabId) ? "" : "none";
+    button.style.display = allowedIds.includes(tabId) ? "" : "none";
   });
-
-  document.querySelectorAll("#webview-container webview[id]").forEach((webview) => {
-    webview.style.display = allowedTabs.includes(webview.id) ? "" : "none";
-  });
-
   updateAppModeControls();
 }
 
-function toggleMenu(menuId) {
-  document.querySelectorAll(".dropdown-menu").forEach(menu => {
-    if (menu.id !== menuId + "-menu") menu.classList.remove("show");
-  });
-  const menu = document.getElementById(menuId + "-menu");
-  if (menu) menu.classList.toggle("show");
+function setAppMode(mode) {
+  const selectedMode = mode === APP_MODES.DEVELOPER ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
+  appMode = selectedMode;
+  window.electronAPI?.settings?.setAppMode?.(selectedMode);
+  applyAppMode();
+  // Descarta as views atuais e abre a primeira aba do novo modo.
+  window.electronAPI?.tabs?.resetAll?.();
+  const firstTab = getAllowedTabs()[0];
+  if (firstTab) showTab(firstTab.id);
 }
 
-function exitApp() { window.electronAPI.app.exit(); }
-function openGitHub() { window.electronAPI.links.openGitHub(); }
-function getCurrentYear() { return new Date().getFullYear(); }
+function cycleAppMode() {
+  setAppMode(appMode === APP_MODES.PERSONAL ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL);
+}
 
-async function initializeAboutInfo() {
-  const appName = "AI Interaction Hub";
-  const yearElement = document.getElementById("current-year");
-  if (yearElement) yearElement.textContent = String(getCurrentYear());
-
-  const versionElement = document.getElementById("app-version");
-  if (!versionElement) return;
-
-  try {
-    const version = await window.electronAPI.app.getVersion();
-    const resolvedVersion = version || "N/A";
-    versionElement.textContent = resolvedVersion;
-    document.title = `${appName} - v${resolvedVersion}`;
-  } catch (_error) {
-    versionElement.textContent = "N/A";
-    document.title = appName;
+// --- Sidebar dinâmica ---
+function buildSidebar() {
+  const container = document.getElementById("sidebar-top");
+  if (!container) return;
+  container.innerHTML = "";
+  for (const tab of TAB_CONFIGS) {
+    const button = document.createElement("button");
+    button.id = `btn-${tab.id}`;
+    button.title = tab.label;
+    button.addEventListener("click", () => showTab(tab.id));
+    button.addEventListener("contextmenu", (event) => showTabContextMenu(event, tab.id));
+    const img = document.createElement("img");
+    img.src = tab.icon;
+    img.alt = tab.label;
+    img.width = 32;
+    img.height = 32;
+    button.appendChild(img);
+    container.appendChild(button);
   }
 }
 
+// --- Menu de contexto das abas ---
+function showTabContextMenu(event, tabId) {
+  if (!isTabAllowed(tabId)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  document.body.setAttribute("data-current-tab", tabId);
+  currentTabId = tabId; // garante que o "Recarregar" age sobre a aba clicada
+  const menu = document.getElementById("tab-context-menu");
+  menu.style.left = `${event.pageX}px`;
+  menu.style.top = `${event.pageY}px`;
+  menu.style.display = "block";
+}
+function hideTabContextMenu() {
+  const menu = document.getElementById("tab-context-menu");
+  if (menu) menu.style.display = "none";
+}
+function hideAllMenus() {
+  document.querySelectorAll(".dropdown-menu").forEach((m) => m.classList.remove("show"));
+}
+
+// --- Modais (overlay) ---
 function showAbout() {
   const modal = document.getElementById("about-modal");
   if (modal) modal.style.display = "flex";
   hideAllMenus();
+  setOverlay(true);
 }
-
 function hideAbout() {
   const modal = document.getElementById("about-modal");
   if (modal) modal.style.display = "none";
+  setOverlay(false);
 }
-
 function showSettings() {
   const modal = document.getElementById("settings-modal");
   if (modal) {
@@ -311,42 +195,151 @@ function showSettings() {
     updateAppModeControls();
   }
   hideAllMenus();
+  setOverlay(true);
 }
-
 function hideSettings() {
   const modal = document.getElementById("settings-modal");
   if (modal) modal.style.display = "none";
+  setOverlay(false);
 }
 
+function exitApp() { window.electronAPI?.app?.exit?.(); }
+function openGitHub() { window.electronAPI?.links?.openGitHub?.(); }
+function getCurrentYear() { return new Date().getFullYear(); }
+
+async function initializeAboutInfo() {
+  const appName = "AI Interaction Hub";
+  const yearElement = document.getElementById("current-year");
+  if (yearElement) yearElement.textContent = String(getCurrentYear());
+  const versionElement = document.getElementById("app-version");
+  if (!versionElement) return;
+  try {
+    const version = await window.electronAPI.app.getVersion();
+    const resolvedVersion = version || "N/A";
+    versionElement.textContent = resolvedVersion;
+    document.title = `${appName} - v${resolvedVersion}`;
+  } catch (_e) {
+    versionElement.textContent = "N/A";
+    document.title = appName;
+  }
+}
+
+// --- Ações ---
+function reloadCurrentTab() {
+  const tabId = currentTabId || document.body.getAttribute("data-current-tab");
+  if (!tabId) return;
+  window.electronAPI?.tabs?.reload?.(tabId);
+  hideTabContextMenu();
+}
+function clearAppCache() {
+  if (confirm("Isso irá limpar todo o cache e dados de navegação (incluindo logins) e reiniciar a aplicação. Deseja continuar?")) {
+    window.electronAPI?.app?.clearCache?.();
+    // Destrói e recria a aba atual após limpar.
+    const tabId = currentTabId;
+    if (tabId) {
+      window.electronAPI?.tabs?.recreate?.(tabId);
+    }
+  }
+}
+
+// --- Troca de abas (delegada ao host) ---
+function showTab(tabId) {
+  if (!isTabAllowed(tabId)) return;
+  currentTabId = tabId;
+  document.body.setAttribute("data-current-tab", tabId);
+  updateWindowTitleForTab(tabId);
+  const descriptor = buildHostTab(tabId);
+  if (descriptor) window.electronAPI?.tabs?.show?.(descriptor);
+  document.querySelectorAll("#sidebar button").forEach((btn) => btn.classList.remove("active-button"));
+  const activeBtn = document.getElementById(`btn-${tabId}`);
+  if (activeBtn) activeBtn.classList.add("active-button");
+}
+
+// --- Find in Page ---
+function ensureFindBarRefs() {
+  findBarEl = document.getElementById("find-in-page-bar");
+  findInputEl = document.getElementById("find-input");
+  findResultsEl = document.getElementById("find-results");
+}
+
+function openFindBar() {
+  if (!currentTabId) return;
+  ensureFindBarRefs();
+  if (!findBarEl) return;
+  findActive = true;
+  findBarEl.style.display = "flex";
+  if (findInputEl) {
+    findInputEl.value = "";
+    findInputEl.focus();
+  }
+  if (findResultsEl) findResultsEl.textContent = "0/0";
+  setOverlay(true);
+  window.electronAPI?.tabs?.findOpen?.(currentTabId);
+}
+
+function closeFindBar() {
+  if (!findBarEl) return;
+  findActive = false;
+  if (currentTabId) window.electronAPI?.tabs?.findClose?.(currentTabId);
+  findBarEl.style.display = "none";
+  if (findInputEl) findInputEl.value = "";
+  if (findResultsEl) findResultsEl.textContent = "0/0";
+  setOverlay(false);
+}
+
+function runFind(forward) {
+  if (!currentTabId || !findActive) return;
+  const query = findInputEl?.value || "";
+  if (!forward) {
+    window.electronAPI?.tabs?.findNext?.(currentTabId, query, false);
+  } else {
+    window.electronAPI?.tabs?.findInput?.(currentTabId, query);
+  }
+}
+
+function wireFindBar() {
+  ensureFindBarRefs();
+  if (!findBarEl) return;
+  document.getElementById("find-next-btn")?.addEventListener("click", () => runFind(true));
+  document.getElementById("find-prev-btn")?.addEventListener("click", () => runFind(false));
+  document.getElementById("close-find-bar-btn")?.addEventListener("click", closeFindBar);
+  findInputEl?.addEventListener("input", () => runFind(true));
+}
+
+// --- Aplica configurações vindas do processo principal (fonte única) ---
+function applySettings(settings) {
+  if (settings && typeof settings.keepTabsActive === "boolean") keepTabsActive = settings.keepTabsActive;
+  if (settings && typeof settings.minimizeToTray === "boolean") minimizeToTray = settings.minimizeToTray;
+  if (settings && typeof settings.appMode === "string" && (settings.appMode === APP_MODES.PERSONAL || settings.appMode === APP_MODES.DEVELOPER)) {
+    appMode = settings.appMode;
+  }
+  applyAppMode();
+}
+
+function initializeWithSettings(settings) {
+  applySettings(settings);
+  settingsReady = true;
+  const firstTab = getAllowedTabs()[0];
+  if (firstTab) showTab(firstTab.id);
+  setTimeout(updateWindowTitleForCurrentTab, 200);
+}
+
+// --- Toggles de configurações ---
 function toggleMinimizeToTray() {
   const checkbox = document.getElementById("minimize-to-tray");
-  minimizeToTray = checkbox.checked;
-  localStorage.setItem("minimizeToTray", minimizeToTray.toString());
-  window.electronAPI.settings.setMinimizeToTray(minimizeToTray);
+  minimizeToTray = !!checkbox?.checked;
+  window.electronAPI?.settings?.setMinimizeToTray?.(minimizeToTray);
 }
 
 function toggleKeepTabsActive() {
   const checkbox = document.getElementById("keep-tabs-active");
-  keepTabsActive = checkbox.checked;
-  localStorage.setItem("keepTabsActive", keepTabsActive.toString());
-  window.electronAPI.settings.setKeepTabsActive(keepTabsActive);
-  window.location.reload();
-}
-
-function setAppMode(mode) {
-  const selectedMode = mode === APP_MODES.DEVELOPER ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
-  if (selectedMode === appMode) {
-    updateAppModeControls();
-    return;
+  keepTabsActive = !!checkbox?.checked;
+  window.electronAPI?.settings?.setKeepTabsActive?.(keepTabsActive);
+  // Reconstrói a aba atual para reaplicar a estratégia (best-effort).
+  if (currentTabId) {
+    window.electronAPI?.tabs?.resetAll?.();
+    showTab(currentTabId);
   }
-
-  appMode = selectedMode;
-  localStorage.setItem("appMode", appMode);
-  resetAllWebviews();
-  applyAppMode();
-
-  const firstTabForMode = getAllowedTabs()[0];
-  if (firstTabForMode) showTab(firstTabForMode);
 }
 
 function toggleAppMode() {
@@ -357,213 +350,83 @@ function toggleAppMode() {
   setAppMode(selectedMode);
 }
 
-function cycleAppMode() {
-  const nextMode = appMode === APP_MODES.PERSONAL ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL;
-  setAppMode(nextMode);
-}
-
-function showTabContextMenu(event, tabId) {
-  if (!isTabAllowed(tabId)) return;
-  event.preventDefault();
-  event.stopPropagation();
-  document.body.setAttribute("data-current-tab", tabId);
-  const menu = document.getElementById("tab-context-menu");
-  menu.style.left = `${event.pageX}px`;
-  menu.style.top = `${event.pageY}px`;
-  menu.style.display = "block";
-}
-
-function hideTabContextMenu() {
-  const menu = document.getElementById("tab-context-menu");
-  if (menu) menu.style.display = "none";
-}
-
-function hideAllMenus() {
-  document.querySelectorAll(".dropdown-menu").forEach(menu => menu.classList.remove("show"));
-}
-
-function reloadCurrentTab() {
-  const webview = getActiveWebview();
-  if (webview) {
-    webview.reload();
-    hideTabContextMenu();
-  }
-}
-
-function clearAppCache() {
-  if (confirm("Isso irá limpar todo o cache e dados de navegação (incluindo logins) e reiniciar a aplicação. Deseja continuar?")) {
-    window.electronAPI.app.clearCache();
-  }
-}
-
-function attachWebviewListeners(webview) {
-  const hideMenus = () => {
-    hideAllMenus();
-    hideTabContextMenu();
-  };
-  webview.addEventListener("focus", hideMenus);
-  webview.addEventListener("mousedown", hideMenus);
-  
-  webview.addEventListener("did-start-loading", () => {
-    startWebviewWatchdog(webview);
-  });
-
-  webview.addEventListener("did-stop-loading", () => {
-    clearWebviewWatchdog(webview.id);
-  });
-
-  webview.addEventListener("destroyed", () => {
-    clearWebviewWatchdog(webview.id);
-  });
-
-  webview.addEventListener('dom-ready', () => {
-    webview.setSpellCheckerLanguages(['pt-BR']);
-    webview.setSpellCheckerEnabled(true);
-    resetWebviewRetry(webview);
-  });
-
-  webview.addEventListener('context-menu', (_event, params) => {
-    window.electronAPI.app.showWebviewContextMenu(params);
-  });
-
-  webview.addEventListener("did-fail-load", (event) => {
-    if (event.errorCode === -3) return; // ERR_ABORTED (navigation interrupted intentionally)
-    if (!event.isMainFrame) return;
-    clearWebviewWatchdog(webview.id);
-    showWebviewRecoveryToast(`${tabLabels[webview.id] || webview.id}: falha de carregamento, tentando recuperar...`);
-    scheduleWebviewRetry(webview, `did-fail-load (${event.errorCode})`);
-  });
-
-  webview.addEventListener("render-process-gone", (event) => {
-    clearWebviewWatchdog(webview.id);
-    const reason = event && event.details && event.details.reason ? event.details.reason : "unknown";
-    showWebviewRecoveryToast(`${tabLabels[webview.id] || webview.id}: processo da aba reiniciado (${reason}).`);
-    scheduleWebviewRetry(webview, `render-process-gone (${reason})`);
-  });
-
-  webview.addEventListener("unresponsive", () => {
-    clearWebviewWatchdog(webview.id);
-    showWebviewRecoveryToast(`${tabLabels[webview.id] || webview.id}: aba sem resposta, tentando recuperar...`);
-    scheduleWebviewRetry(webview, "unresponsive");
-  });
-}
-
-function showTab(tabId) {
-  if (!isTabAllowed(tabId)) return;
-  if (currentTabId === tabId && keepTabsActive) return;
-
-  const container = document.getElementById("webview-container");
-  if (!container) return;
-
-  // 1. Desativar aba anterior
-  if (currentTabId) {
-    const prevWebview = document.getElementById(currentTabId);
-    if (prevWebview) prevWebview.classList.remove("active");
-  }
-
-  currentTabId = tabId;
-  document.body.setAttribute("data-current-tab", tabId);
-  updateWindowTitleForTab(tabId);
-
-  if (keepTabsActive) {
-    // Modo Estático
-    let webview = document.getElementById(tabId);
-    if (!webview) {
-      webview = createWebviewElement(tabId);
-      container.appendChild(webview);
-    }
-    webview.classList.add("active");
-    activeWebview = webview;
-  } else {
-    // Modo Dinâmico (Otimizado)
-    if (activeWebview) {
-      activeWebview.remove();
-      activeWebview = null;
-    }
-    const webview = createWebviewElement(tabId);
-    container.appendChild(webview);
-    webview.classList.add("active");
-    activeWebview = webview;
-  }
-
-  // Atualizar botões
-  document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active-button"));
-  const activeBtn = document.getElementById(`btn-${tabId}`);
-  if (activeBtn) activeBtn.classList.add("active-button");
-}
-
-function createWebviewElement(tabId) {
-  const config = tabConfigs[tabId];
-  const webview = document.createElement("webview");
-  webview.id = tabId;
-  webview.src = config.url;
-  webview.partition = config.partition;
-  webview.setAttribute("allowpopups", "");
-  const cleanUserAgent = getCleanChromeUserAgent();
-
-  if (tabId === "deepseek") {
-    webview.setAttribute("useragent", cleanUserAgent);
-    webview.setAttribute("preload", "./assets/js/deepseek-preload.js");
-  }
-
-  attachWebviewListeners(webview);
-  return webview;
-}
-
-function getActiveWebview() {
-  return activeWebview;
-}
-
-function resetAllWebviews() {
-  const container = document.getElementById("webview-container");
-  if (!container) return;
-
-  webviewLoadWatchdogs.forEach((timerId) => window.clearTimeout(timerId));
-  webviewLoadWatchdogs.clear();
-  if (recoveryToastEl && recoveryToastEl._hideTimer) {
-    window.clearTimeout(recoveryToastEl._hideTimer);
-  }
-  container.querySelectorAll("webview").forEach((webview) => webview.remove());
-  activeWebview = null;
-  currentTabId = null;
-  document.body.removeAttribute("data-current-tab");
-  document.querySelectorAll("#sidebar button").forEach((btn) => btn.classList.remove("active-button"));
-}
-
-// Inicialização
+// --- Inicialização ---
 document.addEventListener("DOMContentLoaded", () => {
-  // Garante o título com a aba após o init-settings (enviado no did-finish-load)
-  if (window.electronAPI && window.electronAPI.settings && window.electronAPI.settings.onInit) {
-    window.electronAPI.settings.onInit(() => {
-      updateWindowTitleForCurrentTab();
-    });
-  }
-
+  buildSidebar();
+  wireFindBar();
   initializeAboutInfo();
-  // Remove webviews estáticas do HTML para evitar instâncias duplicadas/IDs duplicados.
-  resetAllWebviews();
   applyAppMode();
 
-  // Carregar primeira aba disponível do modo atual
-  const initialTab = getAllowedTabs()[0];
-  if (initialTab) showTab(initialTab);
-  setTimeout(() => updateWindowTitleForCurrentTab(), 200);
-  
-  // Listeners globais
+  if (window.electronAPI?.settings?.onInit) {
+    window.electronAPI.settings.onInit((settings) => initializeWithSettings(settings));
+  }
+  // Fallback caso init-settings não chegue.
+  window.setTimeout(() => {
+    if (!settingsReady) initializeWithSettings(DEFAULT_SETTINGS);
+  }, 1500);
+
+  // Listeners globais de UI
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".dropdown")) hideAllMenus();
     if (!e.target.closest("#tab-context-menu")) hideTabContextMenu();
+    if (e.target.classList?.contains("modal")) {
+      e.target.style.display = "none";
+      setOverlay(false);
+    }
   });
 
+  document.querySelectorAll(".close[data-close]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const which = el.getAttribute("data-close");
+      if (which === "settings") hideSettings();
+      else if (which === "about") hideAbout();
+    });
+  });
 
-  // Comandos do processo principal
-  if (window.electronAPI && window.electronAPI.commands) {
-    window.electronAPI.commands.onReloadActiveTab(() => reloadCurrentTab());
-    window.electronAPI.commands.onShowSettings(() => showSettings());
-    window.electronAPI.commands.onToggleAppMode(() => cycleAppMode());
-    window.electronAPI.commands.onSetAppModePersonal(() => setAppMode(APP_MODES.PERSONAL));
-    window.electronAPI.commands.onSetAppModeDeveloper(() => setAppMode(APP_MODES.DEVELOPER));
-    window.electronAPI.commands.onShowAbout(() => showAbout());
-    window.electronAPI.commands.onExitApp(() => exitApp());
+  // Botões da sidebar inferior
+  document.getElementById("btn-app-mode")?.addEventListener("click", cycleAppMode);
+  document.getElementById("btn-clear-cache")?.addEventListener("click", clearAppCache);
+  document.getElementById("btn-settings")?.addEventListener("click", showSettings);
+
+  // Configurações
+  document.getElementById("minimize-to-tray")?.addEventListener("change", toggleMinimizeToTray);
+  document.getElementById("keep-tabs-active")?.addEventListener("change", toggleKeepTabsActive);
+  document.getElementById("app-mode")?.addEventListener("change", toggleAppMode);
+
+  // Menu de contexto das abas
+  document.getElementById("ctx-reload")?.addEventListener("click", reloadCurrentTab);
+
+  // Sobre
+  document.getElementById("github-link")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    openGitHub();
+  });
+
+  // ESC fecha busca/modais
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (findActive) { closeFindBar(); return; }
+    hideSettings();
+    hideAbout();
+    hideTabContextMenu();
+    setOverlay(false);
+  });
+
+  // Eventos do host (main -> renderer)
+  window.electronAPI?.tabs?.onRecoveryToast?.((_id, message) => showWebviewRecoveryToast(message));
+  window.electronAPI?.tabs?.onFound?.((_id, active, matches) => {
+    if (findResultsEl) findResultsEl.textContent = `${active}/${matches}`;
+  });
+
+  // Comandos do menu principal
+  if (window.electronAPI?.commands) {
+    window.electronAPI.commands.onReloadActiveTab?.(() => reloadCurrentTab());
+    window.electronAPI.commands.onFindInActiveTab?.(() => openFindBar());
+    window.electronAPI.commands.onShowSettings?.(() => showSettings());
+    window.electronAPI.commands.onToggleAppMode?.(() => cycleAppMode());
+    window.electronAPI.commands.onSetAppModePersonal?.(() => setAppMode(APP_MODES.PERSONAL));
+    window.electronAPI.commands.onSetAppModeDeveloper?.(() => setAppMode(APP_MODES.DEVELOPER));
+    window.electronAPI.commands.onShowAbout?.(() => showAbout());
+    window.electronAPI.commands.onExitApp?.(() => exitApp());
   }
 });
