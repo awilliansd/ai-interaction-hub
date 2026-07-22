@@ -30,4 +30,9 @@ async function run(){
   }
 }
 
-run();
+run().then(() => {
+  console.log('Icon generation complete.');
+}).catch((err) => {
+  console.error('Icon generation failed:', err);
+  process.exit(1);
+});

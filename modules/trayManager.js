@@ -1,50 +1,20 @@
 // modules/trayManager.js
 const { Tray, Menu } = require("electron");
-const path = require("path");
-const fs = require("fs");
+const { resolveTrayIconPath } = require("./iconResolver");
 
 let tray = null;
 
-// Recebe 'app' como parâmetro
-function createTray(app, mainWindow, settingsManager) {
+// Recebe 'app' como parâmetro (mainWindow/settingsManager mantidos por compatibilidade de API)
+function createTray(app, mainWindow) {
   if (!app) {
     throw new Error("TrayManager: Instância do 'app' do Electron é necessária.");
   }
-  
+
   if (!mainWindow) {
     console.warn("TrayManager: mainWindow não fornecida na criação da bandeja.");
-    // Pode continuar sem mainWindow se a bandeja não precisar interagir diretamente com ela inicialmente
   }
 
-  // Escolhe o ícone correto dependendo se a app está empacotada
-  // Windows Tray funciona melhor com .ico (suporta transparência sem fundo)
-  const isWindows = process.platform === "win32";
-  const iconCandidates = [];
-
-  if (app.isPackaged) {
-    if (isWindows) {
-      iconCandidates.push(path.join(process.resourcesPath, "icons", "app.ico"));
-    } else {
-      iconCandidates.push(
-        path.join(process.resourcesPath, "icons", "hicolor", "512x512", "apps", "aiinteractionhub.png")
-      );
-    }
-  } else {
-    if (isWindows) {
-      iconCandidates.push(path.join(app.getAppPath(), "icons", "app.ico"));
-    } else {
-      iconCandidates.push(path.join(app.getAppPath(), "icons", "app.png"));
-    }
-  }
-
-  // Fallbacks conhecidos no projeto
-  iconCandidates.push(
-    path.join(app.getAppPath(), "icons", "app.ico"),
-    path.join(app.getAppPath(), "icons", "app.png"),
-    path.join(app.getAppPath(), "icons", "aiinteractionhub.png")
-  );
-
-  const iconPath = iconCandidates.find((candidate) => fs.existsSync(candidate));
+  const iconPath = resolveTrayIconPath(app);
   if (!iconPath) {
     console.error("Erro ao criar Tray: nenhum ícone encontrado nos caminhos esperados.");
     return null; // Não foi possível criar a bandeja

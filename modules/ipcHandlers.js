@@ -1,6 +1,8 @@
 // modules/ipcHandlers.js
 const { ipcMain, shell } = require("electron");
-const path = require("path"); // path pode ser necessário para outras coisas, manter por enquanto
+const Channels = require("./ipc-channels");
+
+const GITHUB_URL = "https://github.com/awilliansd";
 
 // Recebe mainWindow, app, e settingsManager como dependências
 function initializeIpcHandlers(mainWindow, app, settingsManager) {
@@ -9,8 +11,6 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     return;
   }
   if (!mainWindow) {
-    // Alguns handlers podem não precisar da mainWindow imediatamente,
-    // mas é bom avisar se ela não estiver disponível.
     console.warn("IPC Handlers: mainWindow não está definida na inicialização.");
   }
   if (!settingsManager) {
@@ -19,47 +19,54 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
   }
 
   // Recarregar uma aba específica (lógica do lado do renderer)
-  ipcMain.on("reload-tab", (event, tabId) => {
+  ipcMain.on(Channels.RELOAD_TAB, (event, tabId) => {
     const win = require("./windowManager").getMainWindow();
     if (win) {
-      win.webContents.send("reload-tab", tabId);
+      win.webContents.send(Channels.RELOAD_TAB, tabId);
     } else {
       console.warn("IPC reload-tab: Janela principal não encontrada.");
     }
   });
 
   // Atualizar o título da janela com o nome da aba atual
-  ipcMain.on("set-window-title", (event, tabName) => {
+  ipcMain.on(Channels.SET_WINDOW_TITLE, (event, tabName) => {
     const windowManager = require("./windowManager");
     windowManager.setWindowTitle(tabName);
   });
 
   // Sair da aplicação
-  ipcMain.on("exit-app", () => {
+  ipcMain.on(Channels.EXIT_APP, () => {
     const appLifecycle = require("./appLifecycle");
     appLifecycle.setIsQuiting(true);
     app.quit();
   });
 
   // Abrir link externo (GitHub)
-  ipcMain.on("open-github", () => {
-    shell.openExternal("https://github.com/awilliansd");
+  ipcMain.on(Channels.OPEN_GITHUB, () => {
+    shell.openExternal(GITHUB_URL);
   });
 
   // Definir se minimiza para a bandeja
-  ipcMain.on("set-minimize-to-tray", (event, value) => {
+  ipcMain.on(Channels.SET_MINIMIZE_TO_TRAY, (event, value) => {
     const currentSettings = settingsManager.loadSettings();
     currentSettings.minimizeToTray = value;
     settingsManager.saveSettings(currentSettings);
-    // Notificar outros módulos se necessário (ex: appLifecycle para lógica de fechar)
   });
 
   // Definir se mantém as abas ativas (modo de alta performance)
-  ipcMain.on("set-keep-tabs-active", (event, value) => {
+  ipcMain.on(Channels.SET_KEEP_TABS_ACTIVE, (event, value) => {
     const currentSettings = settingsManager.loadSettings();
     currentSettings.keepTabsActive = value;
     settingsManager.saveSettings(currentSettings);
     console.log(`Configuração 'keepTabsActive' salva como: ${value}`);
+  });
+
+  // Definir o modo da aplicação (personal/developer)
+  ipcMain.on(Channels.SET_APP_MODE, (event, value) => {
+    const currentSettings = settingsManager.loadSettings();
+    currentSettings.appMode = value;
+    settingsManager.saveSettings(currentSettings);
+    console.log(`Configuração 'appMode' salva como: ${value}`);
   });
 
   // Fechar a aplicação (alternativa a 'exit-app')
@@ -69,38 +76,32 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     app.quit();
   });
 
-  // --- Correção do Handler get-app-version ---
-  // Remove o handler antigo se existir para evitar duplicação
-  ipcMain.removeHandler("get-app-version");
-  // Registra o novo handler usando app.getVersion()
-  ipcMain.handle("get-app-version", () => {
+  // --- Handler get-app-version ---
+  ipcMain.removeHandler(Channels.GET_APP_VERSION);
+  ipcMain.handle(Channels.GET_APP_VERSION, () => {
     try {
-      // A forma padrão e mais segura no Electron
       const version = app.getVersion();
       console.log(`IPC get-app-version: Retornando versão ${version}`);
       return version;
     } catch (error) {
       console.error("Erro ao obter versão da aplicação via app.getVersion():", error);
-      return "N/A"; // Retorna um valor padrão em caso de erro
+      return "N/A";
     }
   });
-  // --- Fim da Correção ---
 
   // Handler para carregar configurações
-  ipcMain.removeHandler("get-settings");
-  ipcMain.handle("get-settings", () => {
+  ipcMain.removeHandler(Channels.GET_SETTINGS);
+  ipcMain.handle(Channels.GET_SETTINGS, () => {
     return settingsManager.loadSettings();
   });
 
-  // Handler para salvar configurações
-  ipcMain.removeHandler("save-settings");
-  ipcMain.handle("save-settings", (event, settings) => {
-    settingsManager.saveSettings(settings);
-    // Pode retornar sucesso ou falha
-    return true;
+  // Handler para salvar configurações (retorna sucesso/falha da persistência)
+  ipcMain.removeHandler(Channels.SAVE_SETTINGS);
+  ipcMain.handle(Channels.SAVE_SETTINGS, (event, settings) => {
+    return settingsManager.saveSettings(settings);
   });
 
-  ipcMain.on("clear-app-cache", async () => {
+  ipcMain.on(Channels.CLEAR_APP_CACHE, async () => {
     try {
       const win = require("./windowManager").getMainWindow();
       if (win) {
@@ -110,7 +111,6 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
           storages: ['cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers', 'cachestorage']
         });
         console.log("[IPC Handler] Cache e dados de armazenamento limpos.");
-        // Recarrega a aplicação para refletir a limpeza
         win.reload();
       }
     } catch (error) {

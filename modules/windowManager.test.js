@@ -136,7 +136,7 @@ describe('windowManager', () => {
       expect(browserWindowOptions.webPreferences.nodeIntegration).toBe(false);
       expect(browserWindowOptions.webPreferences.contextIsolation).toBe(true);
       expect(browserWindowOptions.webPreferences.preload).toBe(path.join('/path/to/app', 'assets/js/preload.js'));
-      expect(browserWindowOptions.webPreferences.webviewTag).toBe(true);
+      expect(browserWindowOptions.webPreferences.webviewTag).toBeUndefined();
       expect(browserWindowOptions.webPreferences.spellcheck).toBe(true);
     });
 

@@ -28,19 +28,19 @@
   - Modo Desenvolvedor (abas focadas em ferramentas de desenvolvimento)
 
 - **Alternância rápida** entre assistentes via barra lateral
-- **Suporte a múltiplas abas** e duplicação de sessões
-- **Menu de contexto** com opções de recarregar, fechar e duplicar abas
-- **Barra de busca integrada** (Ctrl+F) para encontrar texto nas páginas
+- **Sidebar gerada dinamicamente** a partir de uma fonte única de configuração (`assets/js/tabs.config.js`)
+- **Barra de busca integrada** (Ctrl+F) funcionando para encontrar texto na aba ativa
 - **Modo de alta performance** para manter abas ativas em segundo plano
 - **Minimizar para a bandeja do sistema** (tray)
 - **Limpeza de cache** para resolver problemas de login ou performance
 - **Modal de configurações** completo com opções avançadas
 - **Atalhos de teclado** para navegação eficiente
+- **Segurança:** `contextIsolation` ativo, `nodeIntegration` desativado, CSP definido no HTML e allowlist de permissões para as WebViews
 
 ## Pré-requisitos
 
-- Node.js (versão 16 ou superior)
-- npm (geralmente vem com o Node.js)
+- Node.js **versão 22 LTS ou superior** (definido em `.nvmrc`/`.node-version` e em `engines`)
+- npm (versão 10 ou superior)
 
 ## Instalação
 
@@ -94,21 +94,23 @@ O instalador será gerado na pasta `dist/`.
 │   ├── icons/                     # Ícones das IAs
 │   ├── images/                    # Imagens adicionais
 │   └── js/
-│       ├── renderer.js            # Lógica da interface
-│       ├── preload.js             # Preload para comunicação segura
-│       ├── deepseek-preload.js   # Preload específico para DeepSeek
-│       └── webview-preload.js    # Preload para webviews
+│       ├── renderer.js            # Lógica da interface (ES module)
+│       ├── tabs.config.js        # Configuração única das abas (URLs/partições/ícones/modos)
+│       ├── preload.js             # Preload para comunicação segura (contextBridge)
+│       └── deepseek-preload.js   # Preload específico para DeepSeek
 ├── icons/                         # Ícones do aplicativo
 ├── modules/                       # Módulos principais do Electron
 │   ├── appLifecycle.js           # Gerenciamento do ciclo de vida
+│   ├── ipc-channels.js           # Nomes centralizados dos canais IPC
+│   ├── iconResolver.js           # Resolução de caminhos de ícone (janela/bandeja)
 │   ├── ipcHandlers.js            # Manipuladores IPC
-│   ├── settingsManager.js        # Gerenciamento de configurações
+│   ├── settingsManager.js        # Gerenciamento de configurações (settings.json)
 │   ├── trayManager.js            # Gerenciamento da bandeja
+│   ├── updaterManager.js         # Atualizações automáticas
 │   └── windowManager.js          # Gerenciamento de janelas
 ├── scripts/
 │   └── generate-icons.js         # Script para gerar ícones
-├── tests/                        # Testes automatizados
-│   └── settingsManager.test.js   # Testes do gerenciador de configurações
+├── modules/*.test.js             # Testes automatizados (Jest)
 ├── index.html                    # Página principal
 ├── main.js                       # Arquivo principal do Electron
 ├── package.json                  # Configurações do projeto
@@ -163,11 +165,12 @@ O aplicativo utiliza Electron com uma arquitetura modular:
 
 ### Adicionando Novas IAs
 
-Para adicionar uma nova IA, edite `assets/js/renderer.js`:
+Para adicionar uma nova IA, edite **somente** `assets/js/tabs.config.js`:
 
-1. Adicione a configuração no objeto `tabConfigs`
-2. Inclua o ID na lista apropriada (`personalTabs` ou `developerTabs`)
-3. Adicione o ícone correspondente em `assets/icons/`
+1. Adicione uma entrada ao array `TAB_CONFIGS` com `id`, `label`, `url`, `partition`, `icon` e `modes`
+2. Adicione o ícone correspondente em `assets/icons/`
+
+A barra lateral e os modos da aplicação são gerados automaticamente a partir desse arquivo.
 
 ### Contribuição
 
