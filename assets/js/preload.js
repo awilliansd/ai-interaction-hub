@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     findNext: (tabId, query, forward) => ipcRenderer.send("host:find-next", { id: tabId, query, forward }),
     findClose: (tabId) => ipcRenderer.send("host:find-close", { id: tabId }),
     clearTabCache: (tabId) => ipcRenderer.send("host:clear-tab-cache", { id: tabId }),
+    showContextMenu: (tabId, x, y) => ipcRenderer.invoke("show-tab-context-menu", tabId, x, y),
     onLoading: (callback) => ipcRenderer.on("tab:loading", (_e, id, loading) => callback(id, loading)),
     onRecoveryToast: (callback) => ipcRenderer.on("tab:recovery-toast", (_e, id, msg) => callback(id, msg)),
     onFound: (callback) => ipcRenderer.on("tab:found", (_e, id, active, matches) => callback(id, active, matches)),

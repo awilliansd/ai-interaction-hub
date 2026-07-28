@@ -152,21 +152,14 @@ function buildSidebar() {
   }
 }
 
-// --- Menu de contexto das abas ---
+// --- Menu de contexto das abas (nativo via Electron Menu) ---
 function showTabContextMenu(event, tabId) {
   if (!isTabAllowed(tabId)) return;
   event.preventDefault();
   event.stopPropagation();
   document.body.setAttribute("data-current-tab", tabId);
-  currentTabId = tabId; // garante que o "Recarregar" age sobre a aba clicada
-  const menu = document.getElementById("tab-context-menu");
-  menu.style.left = `${event.pageX}px`;
-  menu.style.top = `${event.pageY}px`;
-  menu.style.display = "block";
-}
-function hideTabContextMenu() {
-  const menu = document.getElementById("tab-context-menu");
-  if (menu) menu.style.display = "none";
+  currentTabId = tabId;
+  window.electronAPI?.tabs?.showContextMenu?.(tabId, event.x, event.y);
 }
 function hideAllMenus() {
   document.querySelectorAll(".dropdown-menu").forEach((m) => m.classList.remove("show"));
@@ -229,7 +222,6 @@ function reloadCurrentTab() {
   const tabId = currentTabId || document.body.getAttribute("data-current-tab");
   if (!tabId) return;
   window.electronAPI?.tabs?.reload?.(tabId);
-  hideTabContextMenu();
 }
 function clearAppCache() {
   if (confirm("Isso irá limpar todo o cache e dados de navegação (incluindo logins) e reiniciar a aplicação. Deseja continuar?")) {
@@ -368,7 +360,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Listeners globais de UI
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".dropdown")) hideAllMenus();
-    if (!e.target.closest("#tab-context-menu")) hideTabContextMenu();
     if (e.target.classList?.contains("modal")) {
       e.target.style.display = "none";
       setOverlay(false);
@@ -393,9 +384,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("keep-tabs-active")?.addEventListener("change", toggleKeepTabsActive);
   document.getElementById("app-mode")?.addEventListener("change", toggleAppMode);
 
-  // Menu de contexto das abas
-  document.getElementById("ctx-reload")?.addEventListener("click", reloadCurrentTab);
-
   // Sobre
   document.getElementById("github-link")?.addEventListener("click", (e) => {
     e.preventDefault();
@@ -408,7 +396,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (findActive) { closeFindBar(); return; }
     hideSettings();
     hideAbout();
-    hideTabContextMenu();
     setOverlay(false);
   });
 

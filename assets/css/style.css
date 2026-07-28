@@ -221,29 +221,6 @@ body {
     color: #00ccff;
 }
 
-/* Menu de Contexto */
-.context-menu {
-    position: fixed;
-    background: #2a2a2a;
-    border: 1px solid #404040;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    z-index: 1500;
-    display: none;
-    min-width: 120px;
-}
-
-.context-option {
-    padding: 8px 12px;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.context-option:hover {
-    background-color: #404040;
-}
-
 /* Conteúdo Principal */
 #main-content {
     display: flex;
