@@ -10,7 +10,12 @@ jest.mock('electron', () => ({
   },
   shell: {
     openExternal: jest.fn()
-  }
+  },
+  Menu: jest.fn().mockImplementation(() => ({
+    append: jest.fn(),
+    popup: jest.fn(),
+  })),
+  MenuItem: jest.fn(),
 }));
 
 // Mock dos módulos internos
@@ -75,6 +80,7 @@ describe('ipcHandlers', () => {
       expect(ipcMain.handle).toHaveBeenCalledWith('get-app-version', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('get-settings', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('save-settings', expect.any(Function));
+      expect(ipcMain.handle).toHaveBeenCalledWith('show-tab-context-menu', expect.any(Function));
       
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('get-app-version');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('get-settings');
