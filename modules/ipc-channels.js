@@ -18,6 +18,7 @@ module.exports = {
   SAVE_SETTINGS: "save-settings",
   GET_GROK_USER_AGENT: "get-grok-user-agent",
   SHOW_WEBVIEW_CONTEXT_MENU: "show-webview-context-menu",
+  SHOW_TAB_CONTEXT_MENU: "show-tab-context-menu",
 
   // Comandos enviados do menu do processo principal para o renderer
   COMMAND_PREFIX: "command:",

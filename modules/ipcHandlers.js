@@ -1,5 +1,5 @@
 // modules/ipcHandlers.js
-const { ipcMain, shell } = require("electron");
+const { ipcMain, shell, Menu, MenuItem } = require("electron");
 const Channels = require("./ipc-channels");
 
 const GITHUB_URL = "https://github.com/awilliansd";
@@ -99,6 +99,23 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
   ipcMain.removeHandler(Channels.SAVE_SETTINGS);
   ipcMain.handle(Channels.SAVE_SETTINGS, (event, settings) => {
     return settingsManager.saveSettings(settings);
+  });
+
+  // Menu de contexto nativo das abas da sidebar
+  ipcMain.handle(Channels.SHOW_TAB_CONTEXT_MENU, (event, tabId, x, y) => {
+    const windowManager = require("./windowManager");
+    const win = windowManager.getMainWindow();
+    if (!win) return;
+
+    const menu = new Menu();
+    menu.append(new MenuItem({
+      label: "Recarregar",
+      click: () => {
+        win.webContents.send(Channels.RELOAD_TAB, tabId);
+      },
+    }));
+
+    menu.popup({ window: win, x, y });
   });
 
   ipcMain.on(Channels.CLEAR_APP_CACHE, async () => {
