@@ -9,6 +9,14 @@ const Channels = require("./ipc-channels");
 
 const SIDEBAR_WIDTH = 60;
 
+// Cabeçalho Accept-Language enviado às sessões das abas de IA (fonte única,
+// reutilizado no interceptor do session.defaultSession em main.js).
+const ACCEPT_LANGUAGE_PT_BR = "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7";
+
+// Sessões cujo interceptor de Accept-Language já foi registrado (evita duplo
+// registro ao recriar views, já que session.fromPartition é cacheado).
+const configuredSessions = new Set();
+
 // Permissões permitidas por IA (allowlist).
 const ALLOWED_IA_PERMISSIONS = new Set([
   "clipboard-read",
@@ -72,6 +80,17 @@ function configureSessionPermissions(ses, tabId) {
     if (!allowed) log.warn(`[security] Permissão negada para IA '${tabId}': ${permission}`);
     callback(allowed);
   });
+
+  // Injeta o Accept-Language em pt-BR nas requisições da sessão. Sem isso, as
+  // partições das abas (ex: persist:kimi) ignoram o idioma e carregam o padrão
+  // do site (Kimi abre em chinês).
+  if (!configuredSessions.has(ses)) {
+    configuredSessions.add(ses);
+    ses.webRequest.onBeforeSendHeaders((details, callback) => {
+      details.requestHeaders["Accept-Language"] = ACCEPT_LANGUAGE_PT_BR;
+      callback({ requestHeaders: details.requestHeaders });
+    });
+  }
 }
 
 // --- Resiliência ---
@@ -397,6 +416,7 @@ function clearTabCache(payload) {
 }
 
 module.exports = {
+  ACCEPT_LANGUAGE_PT_BR,
   initializeHost,
   showTab,
   reloadTab,

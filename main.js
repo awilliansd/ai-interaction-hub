@@ -46,9 +46,10 @@ if (!gotTheLock) {
     // para detecção de automação, substituindo o preload contextIsolated).
     app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
 
-    // Intercepta e modifica o cabeçalho Accept-Language
+    // Intercepta e modifica o cabeçalho Accept-Language (mesma constante usada
+    // nas sessões de partição das abas de IA — ver webviewHost.js)
     session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-      details.requestHeaders['Accept-Language'] = 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7';
+      details.requestHeaders['Accept-Language'] = webviewHost.ACCEPT_LANGUAGE_PT_BR;
       callback({ requestHeaders: details.requestHeaders });
     });
 
