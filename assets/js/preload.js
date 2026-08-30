@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   app: {
     exit: () => ipcRenderer.send("exit-app"),
     getVersion: () => ipcRenderer.invoke("get-app-version"),
-    clearCache: () => ipcRenderer.send("clear-app-cache"),
+    clearCache: (partitions) => ipcRenderer.send("clear-app-cache", partitions),
     setWindowTitle: (tabName) => ipcRenderer.send("set-window-title", tabName)
   },
   settings: {

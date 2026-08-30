@@ -225,12 +225,10 @@ function reloadCurrentTab() {
 }
 function clearAppCache() {
   if (confirm("Isso irá limpar todo o cache e dados de navegação (incluindo logins) e reiniciar a aplicação. Deseja continuar?")) {
-    window.electronAPI?.app?.clearCache?.();
-    // Destrói e recria a aba atual após limpar.
-    const tabId = currentTabId;
-    if (tabId) {
-      window.electronAPI?.tabs?.recreate?.(tabId);
-    }
+    // Passa as partições de todas as abas para o main limpar os logins das IAs
+    // (persist:*) e não só a sessão padrão do sidebar.
+    const partitions = Array.from(new Set(TAB_CONFIGS.map((t) => t.partition).filter(Boolean)));
+    window.electronAPI?.app?.clearCache?.(partitions);
   }
 }
 

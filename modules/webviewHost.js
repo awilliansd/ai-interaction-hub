@@ -17,6 +17,9 @@ const ACCEPT_LANGUAGE_PT_BR = "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7";
 // registro ao recriar views, já que session.fromPartition é cacheado).
 const configuredSessions = new Set();
 
+// Tipos de armazenamento limpos nas sessões (cache/storage das abas de IA).
+const STORAGE_TYPES = ["cookies", "filesystem", "indexdb", "localstorage", "shadercache", "websql", "serviceworkers", "cachestorage"];
+
 // Permissões permitidas por IA (allowlist).
 const ALLOWED_IA_PERMISSIONS = new Set([
   "clipboard-read",
@@ -91,6 +94,104 @@ function configureSessionPermissions(ses, tabId) {
       callback({ requestHeaders: details.requestHeaders });
     });
   }
+}
+
+// --- Pop-ups (janelas de login de IA) ---
+// O login (ex: Google) abre uma janela via window.open e devolve o resultado
+// com window.opener.postMessage(). Por isso a pop-up deve ser criada pelo
+// Electron com action:"allow" (preserva o opener e herda a partition/sessão da
+// aba). Criar a janela manualmente (deny + new BrowserWindow) quebrava o opener,
+// deixando a pop-up numa tela preta sem callback.
+const POPUP_DEFAULTS = { width: 520, height: 640 };
+const AUTH_PROVIDER_ROOTS = [
+  "google.com",
+  "github.com",
+  "apple.com",
+  "facebook.com",
+  "microsoftonline.com",
+  "live.com",
+];
+
+function getRootHost(hostname) {
+  const parts = String(hostname || "")
+    .toLowerCase()
+    .replace(/^www\./, "")
+    .split(".");
+  return parts.slice(-2).join(".");
+}
+
+function isAuthProviderHost(hostname) {
+  return AUTH_PROVIDER_ROOTS.includes(getRootHost(hostname));
+}
+
+function isTabSiteHost(hostname, tab) {
+  try {
+    const base = getRootHost(new URL(tab.config.url).hostname);
+    return getRootHost(hostname) === base;
+  } catch (_e) {
+    return false;
+  }
+}
+
+function handleWindowOpen(tab) {
+  return (details) => {
+    if (!details || !details.url) return { action: "deny" };
+    if (!win || win.isDestroyed()) return { action: "deny" };
+    return {
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        parent: win,
+        width: POPUP_DEFAULTS.width,
+        height: POPUP_DEFAULTS.height,
+        autoHideMenuBar: true,
+        backgroundColor: "#1e1e1e",
+      },
+    };
+  };
+}
+
+function trackPopup(tab, popupWin) {
+  if (!popupWin || popupWin.isDestroyed()) return;
+  if (tab.popups) tab.popups.add(popupWin);
+  popupWin.on("closed", () => {
+    if (tab.popups) tab.popups.delete(popupWin);
+  });
+
+  // Pop-ups aninhados (ex: Google aberto dentro do fluxo de verificação de telefone)
+  const childWc = popupWin.webContents;
+  if (childWc && !childWc.isDestroyed()) {
+    childWc.setWindowOpenHandler(handleWindowOpen(tab));
+    childWc.on("did-create-window", (_nestedWin) => trackPopup(tab, _nestedWin));
+  }
+  trackPopupAuthReload(tab, popupWin);
+}
+
+function trackPopupAuthReload(tab, popupWin) {
+  let sawAuthProvider = false;
+  let handled = false;
+  const finish = () => {
+    if (handled) return;
+    handled = true;
+    if (!popupWin.isDestroyed()) popupWin.destroy();
+    reloadTab({ id: tab.config.id });
+  };
+  const onNavigate = (url) => {
+    if (handled) return;
+    let hostname = "";
+    try { hostname = new URL(url).hostname; } catch (_e) { return; }
+    if (isAuthProviderHost(hostname)) {
+      sawAuthProvider = true;
+    } else if (sawAuthProvider && isTabSiteHost(hostname, tab)) {
+      // Voltou do provedor para o site da IA: login concluído.
+      finish();
+    }
+  };
+  popupWin.webContents.on("did-navigate", (_e, url) => onNavigate(url));
+  popupWin.webContents.on("did-navigate-in-page", (_e, url) => onNavigate(url));
+  popupWin.on("closed", () => {
+    // Fallback: passou por um provedor mas fechou sem callback detectado.
+    if (sawAuthProvider) finish();
+  });
 }
 
 // --- Resiliência ---
@@ -174,6 +275,26 @@ function attemptRecreate(tabId, reason) {
 // --- Listeners ---
 function attachListeners(tab, wc, config) {
   const tabId = config.id;
+
+  // Recarregamento por atalho (Ctrl/Cmd+R): intercepta a tecla antes da página
+  // para garantir o reload mesmo quando o site engole o atalho ou o acelerador
+  // do menu não dispara com a WebContentsView focada.
+  wc.on("before-input-event", (event, input) => {
+    if (
+      input.type === "keyDown" &&
+      input.key.toLowerCase() === "r" &&
+      (input.control || input.meta) &&
+      !input.alt
+    ) {
+      event.preventDefault();
+      try { wc.reloadIgnoringCache(); } catch (_e) { wc.reload(); }
+    }
+  });
+
+  // Pop-ups de login: cria via action:"allow" (preserva opener e sessão da aba)
+  // e rastreia a janela criada para tratar auth-reload e limpeza.
+  wc.setWindowOpenHandler(handleWindowOpen(tab));
+  wc.on("did-create-window", (childWin) => trackPopup(tab, childWin));
 
   wc.on("did-start-loading", () => {
     startWatchdog(tab);
@@ -286,6 +407,7 @@ function showTab(payload) {
       recreateState: 0,
       watchdog: null,
       findActive: false,
+      popups: new Set(),
     };
     tabs.set(config.id, tab);
     tab.view = createViewForConfig(config);
@@ -337,6 +459,13 @@ function destroyTab(tabId) {
   const tab = tabs.get(tabId);
   if (!tab) return;
   clearWatchdog(tab);
+  // Fecha as pop-ups de login abertas para a aba.
+  if (tab.popups) {
+    for (const popupWin of Array.from(tab.popups)) {
+      if (!popupWin.isDestroyed()) popupWin.destroy();
+    }
+    tab.popups.clear();
+  }
   try { win.contentView.removeChildView(tab.view); } catch (_e) {}
   const wc = tab.view.webContents;
   if (!wc.isDestroyed()) wc.close();
@@ -405,14 +534,31 @@ function clearTabCache(payload) {
     try {
       const ses = tab.config.partition ? session.fromPartition(tab.config.partition) : tab.view.webContents.session;
       await ses.clearCache();
-      await ses.clearStorageData({
-        storages: ["cookies", "filesystem", "indexdb", "localstorage", "shadercache", "websql", "serviceworkers", "cachestorage"],
-      });
+      await ses.clearStorageData({ storages: STORAGE_TYPES });
       if (!tab.view.webContents.isDestroyed()) tab.view.webContents.reload();
     } catch (error) {
       log.error(`[webviewHost] Erro ao limpar cache da aba '${payload?.id}':`, error);
     }
   })();
+}
+
+// Limpa cache/armazenamento de todas as partições das abas de IA. Sem isso, o
+// "Limpar Cache e Reiniciar" só apagava a sessão padrão (sidebar) e os logins
+// das IAs (persist:kimi, persist:gemini, ...) permaneciam.
+async function clearAllPartitions(partitions = []) {
+  let targets = Array.isArray(partitions) && partitions.length > 0
+    ? partitions
+    : Array.from(new Set(Array.from(tabs.values()).map((t) => t.config.partition || "default")));
+  if (targets.length === 0) targets = ["default"];
+  for (const partition of targets) {
+    try {
+      const ses = session.fromPartition(partition);
+      await ses.clearCache();
+      await ses.clearStorageData({ storages: STORAGE_TYPES });
+    } catch (error) {
+      log.error(`[webviewHost] Erro ao limpar sessão '${partition}':`, error);
+    }
+  }
 }
 
 module.exports = {
@@ -429,4 +575,5 @@ module.exports = {
   findNext,
   findClose,
   clearTabCache,
+  clearAllPartitions,
 };
