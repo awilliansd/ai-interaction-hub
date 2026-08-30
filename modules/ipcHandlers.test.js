@@ -27,6 +27,11 @@ jest.mock('./appLifecycle', () => ({
   setIsQuiting: jest.fn()
 }));
 
+jest.mock('./webviewHost', () => ({
+  clearAllPartitions: jest.fn(),
+  destroyAllTabs: jest.fn()
+}));
+
 describe('ipcHandlers', () => {
   // Mock das dependências
   const mockMainWindow = {
@@ -248,17 +253,20 @@ describe('ipcHandlers', () => {
     });
 
     it('deve registrar o handler para clear-app-cache e limpar o cache', async () => {
+      const partitions = ['persist:kimi', 'persist:gemini'];
       ipcHandlers.initializeIpcHandlers(mockMainWindow, mockApp, mockSettingsManager);
 
       // Encontra o handler registrado para 'clear-app-cache'
       const clearAppCacheHandler = ipcMain.on.mock.calls.find(call => call[0] === 'clear-app-cache')[1];
       
       // Executa o handler
-      await clearAppCacheHandler();
+      await clearAppCacheHandler({}, partitions);
       
-      // Verifica se o cache foi limpo
+      // Verifica se o cache foi limpo na sessão padrão e nas partições
       expect(mockMainWindow.webContents.session.clearCache).toHaveBeenCalled();
       expect(mockMainWindow.webContents.session.clearStorageData).toHaveBeenCalled();
+      expect(require('./webviewHost').clearAllPartitions).toHaveBeenCalledWith(partitions);
+      expect(require('./webviewHost').destroyAllTabs).toHaveBeenCalled();
       expect(mockMainWindow.reload).toHaveBeenCalled();
     });
 

@@ -121,18 +121,26 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     menu.popup({ window: win, x, y });
   });
 
-  ipcMain.on(Channels.CLEAR_APP_CACHE, async () => {
+  ipcMain.on(Channels.CLEAR_APP_CACHE, async (_event, partitions) => {
     try {
+      const webviewHost = require("./webviewHost");
       const win = require("./windowManager").getMainWindow();
       if (win) {
+        // Sessão padrão (sidebar/renderer)
         const ses = win.webContents.session;
         await ses.clearCache();
         await ses.clearStorageData({
           storages: ['cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers', 'cachestorage']
         });
-        console.log("[IPC Handler] Cache e dados de armazenamento limpos.");
-        win.reload();
+        console.log("[IPC Handler] Cache da sessão padrão limpo.");
       }
+      // Sessões de partição das abas de IA (ex: persist:kimi) — é aqui que
+      // ficam os logins; sem isso o "Limpar Cache e Reiniciar" não zerava nada.
+      await webviewHost.clearAllPartitions(partitions);
+      // Descarta todas as views para serem recriadas do zero.
+      webviewHost.destroyAllTabs();
+      console.log("[IPC Handler] Cache e dados de armazenamento limpos.");
+      if (win) win.reload();
     } catch (error) {
       console.error("Erro ao limpar o cache:", error);
     }

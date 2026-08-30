@@ -17,6 +17,9 @@ const ACCEPT_LANGUAGE_PT_BR = "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7";
 // registro ao recriar views, já que session.fromPartition é cacheado).
 const configuredSessions = new Set();
 
+// Tipos de armazenamento limpos nas sessões (cache/storage das abas de IA).
+const STORAGE_TYPES = ["cookies", "filesystem", "indexdb", "localstorage", "shadercache", "websql", "serviceworkers", "cachestorage"];
+
 // Permissões permitidas por IA (allowlist).
 const ALLOWED_IA_PERMISSIONS = new Set([
   "clipboard-read",
@@ -534,14 +537,31 @@ function clearTabCache(payload) {
     try {
       const ses = tab.config.partition ? session.fromPartition(tab.config.partition) : tab.view.webContents.session;
       await ses.clearCache();
-      await ses.clearStorageData({
-        storages: ["cookies", "filesystem", "indexdb", "localstorage", "shadercache", "websql", "serviceworkers", "cachestorage"],
-      });
+      await ses.clearStorageData({ storages: STORAGE_TYPES });
       if (!tab.view.webContents.isDestroyed()) tab.view.webContents.reload();
     } catch (error) {
       log.error(`[webviewHost] Erro ao limpar cache da aba '${payload?.id}':`, error);
     }
   })();
+}
+
+// Limpa cache/armazenamento de todas as partições das abas de IA. Sem isso, o
+// "Limpar Cache e Reiniciar" só apagava a sessão padrão (sidebar) e os logins
+// das IAs (persist:kimi, persist:gemini, ...) permaneciam.
+async function clearAllPartitions(partitions = []) {
+  let targets = Array.isArray(partitions) && partitions.length > 0
+    ? partitions
+    : Array.from(new Set(Array.from(tabs.values()).map((t) => t.config.partition || "default")));
+  if (targets.length === 0) targets = ["default"];
+  for (const partition of targets) {
+    try {
+      const ses = session.fromPartition(partition);
+      await ses.clearCache();
+      await ses.clearStorageData({ storages: STORAGE_TYPES });
+    } catch (error) {
+      log.error(`[webviewHost] Erro ao limpar sessão '${partition}':`, error);
+    }
+  }
 }
 
 module.exports = {
@@ -558,4 +578,5 @@ module.exports = {
   findNext,
   findClose,
   clearTabCache,
+  clearAllPartitions,
 };
