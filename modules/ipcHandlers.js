@@ -111,7 +111,10 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     menu.append(new MenuItem({
       label: "Recarregar",
       click: () => {
-        win.webContents.send(Channels.RELOAD_TAB, tabId);
+        // Reload direto no host da view (o canal 'reload-tab' enviado ao
+        // renderer não é tratado por ninguém — caminho quebrado).
+        const webviewHost = require("./webviewHost");
+        webviewHost.reloadTab({ id: tabId });
       },
     }));
 

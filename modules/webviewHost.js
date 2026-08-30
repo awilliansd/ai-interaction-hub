@@ -2,7 +2,7 @@
 // Hospeda cada IA em uma WebContentsView anexada à janela principal,
 // substituindo o uso do <webview>. Centraliza resiliência (retry/watchdog/recreate),
 // layout, find-in-page, troca/desconstrução de abas e permissões por sessão.
-const { WebContentsView, Menu, MenuItem, session, app } = require("electron");
+const { WebContentsView, BrowserWindow, Menu, MenuItem, session, app } = require("electron");
 const path = require("path");
 const log = require("electron-log");
 const Channels = require("./ipc-channels");
@@ -93,6 +93,109 @@ function configureSessionPermissions(ses, tabId) {
   }
 }
 
+// --- Pop-ups (janelas de login de IA) ---
+// O login (ex: Google) abre uma janela via window.open. Sem tratamento, o
+// Electron cria uma janela avulsa que não compartilha a sessão da aba, então o
+// login não reflete no app. Hospedamos as pop-ups em janelas filhas com a MESMA
+// partition da aba e recarregamos a aba quando o fluxo de auth termina.
+const POPUP_DEFAULTS = { width: 520, height: 640 };
+const AUTH_PROVIDER_ROOTS = [
+  "google.com",
+  "github.com",
+  "apple.com",
+  "facebook.com",
+  "microsoftonline.com",
+  "live.com",
+];
+
+function getRootHost(hostname) {
+  const parts = String(hostname || "")
+    .toLowerCase()
+    .replace(/^www\./, "")
+    .split(".");
+  return parts.slice(-2).join(".");
+}
+
+function isAuthProviderHost(hostname) {
+  return AUTH_PROVIDER_ROOTS.includes(getRootHost(hostname));
+}
+
+function isTabSiteHost(hostname, tab) {
+  try {
+    const base = getRootHost(new URL(tab.config.url).hostname);
+    return getRootHost(hostname) === base;
+  } catch (_e) {
+    return false;
+  }
+}
+
+function handleWindowOpen(tab) {
+  return (details) => {
+    if (!details || !details.url) return { action: "deny" };
+    openPopupWindow(tab, details.url);
+    return { action: "deny" };
+  };
+}
+
+function openPopupWindow(tab, url) {
+  if (!win || win.isDestroyed()) return null;
+  const popupWin = new BrowserWindow({
+    parent: win,
+    width: POPUP_DEFAULTS.width,
+    height: POPUP_DEFAULTS.height,
+    autoHideMenuBar: true,
+    backgroundColor: "#1e1e1e",
+    webPreferences: {
+      partition: tab.config.partition || "default",
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      spellcheck: true,
+    },
+  });
+  if (tab.popups) tab.popups.add(popupWin);
+  popupWin.on("closed", () => {
+    if (tab.popups) tab.popups.delete(popupWin);
+  });
+
+  // Pop-ups aninhados (ex: Google aberto dentro do fluxo de verificação de telefone)
+  popupWin.webContents.setWindowOpenHandler(handleWindowOpen(tab));
+  trackPopupAuthReload(tab, popupWin);
+
+  popupWin.loadURL(url);
+  popupWin.show();
+  popupWin.focus();
+  return popupWin;
+}
+
+function trackPopupAuthReload(tab, popupWin) {
+  let sawAuthProvider = false;
+  let handled = false;
+  const finish = () => {
+    if (handled) return;
+    handled = true;
+    if (!popupWin.isDestroyed()) popupWin.destroy();
+    reloadTab({ id: tab.config.id });
+  };
+  const onNavigate = (url) => {
+    if (handled) return;
+    let hostname = "";
+    try { hostname = new URL(url).hostname; } catch (_e) { return; }
+    if (isAuthProviderHost(hostname)) {
+      sawAuthProvider = true;
+    } else if (sawAuthProvider && isTabSiteHost(hostname, tab)) {
+      // Voltou do provedor para o site da IA: login concluído.
+      finish();
+    }
+  };
+  popupWin.webContents.on("did-navigate", (_e, url) => onNavigate(url));
+  popupWin.webContents.on("did-navigate-in-page", (_e, url) => onNavigate(url));
+  popupWin.on("closed", () => {
+    // Fallback: passou por um provedor mas fechou sem callback detectado.
+    if (sawAuthProvider) finish();
+  });
+}
+
 // --- Resiliência ---
 function clearWatchdog(tab) {
   if (!tab.watchdog) return;
@@ -174,6 +277,24 @@ function attemptRecreate(tabId, reason) {
 // --- Listeners ---
 function attachListeners(tab, wc, config) {
   const tabId = config.id;
+
+  // Recarregamento por atalho (Ctrl/Cmd+R): intercepta a tecla antes da página
+  // para garantir o reload mesmo quando o site engole o atalho ou o acelerador
+  // do menu não dispara com a WebContentsView focada.
+  wc.on("before-input-event", (event, input) => {
+    if (
+      input.type === "keyDown" &&
+      input.key.toLowerCase() === "r" &&
+      (input.control || input.meta) &&
+      !input.alt
+    ) {
+      event.preventDefault();
+      try { wc.reloadIgnoringCache(); } catch (_e) { wc.reload(); }
+    }
+  });
+
+  // Pop-ups de login hospedados em janelas filhas (mesma sessão da aba).
+  wc.setWindowOpenHandler(handleWindowOpen(tab));
 
   wc.on("did-start-loading", () => {
     startWatchdog(tab);
@@ -286,6 +407,7 @@ function showTab(payload) {
       recreateState: 0,
       watchdog: null,
       findActive: false,
+      popups: new Set(),
     };
     tabs.set(config.id, tab);
     tab.view = createViewForConfig(config);
@@ -337,6 +459,13 @@ function destroyTab(tabId) {
   const tab = tabs.get(tabId);
   if (!tab) return;
   clearWatchdog(tab);
+  // Fecha as pop-ups de login abertas para a aba.
+  if (tab.popups) {
+    for (const popupWin of Array.from(tab.popups)) {
+      if (!popupWin.isDestroyed()) popupWin.destroy();
+    }
+    tab.popups.clear();
+  }
   try { win.contentView.removeChildView(tab.view); } catch (_e) {}
   const wc = tab.view.webContents;
   if (!wc.isDestroyed()) wc.close();
