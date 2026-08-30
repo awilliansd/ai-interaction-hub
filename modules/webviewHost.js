@@ -2,7 +2,7 @@
 // Hospeda cada IA em uma WebContentsView anexada à janela principal,
 // substituindo o uso do <webview>. Centraliza resiliência (retry/watchdog/recreate),
 // layout, find-in-page, troca/desconstrução de abas e permissões por sessão.
-const { WebContentsView, BrowserWindow, Menu, MenuItem, session, app } = require("electron");
+const { WebContentsView, Menu, MenuItem, session, app } = require("electron");
 const path = require("path");
 const log = require("electron-log");
 const Channels = require("./ipc-channels");
@@ -97,10 +97,11 @@ function configureSessionPermissions(ses, tabId) {
 }
 
 // --- Pop-ups (janelas de login de IA) ---
-// O login (ex: Google) abre uma janela via window.open. Sem tratamento, o
-// Electron cria uma janela avulsa que não compartilha a sessão da aba, então o
-// login não reflete no app. Hospedamos as pop-ups em janelas filhas com a MESMA
-// partition da aba e recarregamos a aba quando o fluxo de auth termina.
+// O login (ex: Google) abre uma janela via window.open e devolve o resultado
+// com window.opener.postMessage(). Por isso a pop-up deve ser criada pelo
+// Electron com action:"allow" (preserva o opener e herda a partition/sessão da
+// aba). Criar a janela manualmente (deny + new BrowserWindow) quebrava o opener,
+// deixando a pop-up numa tela preta sem callback.
 const POPUP_DEFAULTS = { width: 520, height: 640 };
 const AUTH_PROVIDER_ROOTS = [
   "google.com",
@@ -135,40 +136,34 @@ function isTabSiteHost(hostname, tab) {
 function handleWindowOpen(tab) {
   return (details) => {
     if (!details || !details.url) return { action: "deny" };
-    openPopupWindow(tab, details.url);
-    return { action: "deny" };
+    if (!win || win.isDestroyed()) return { action: "deny" };
+    return {
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        parent: win,
+        width: POPUP_DEFAULTS.width,
+        height: POPUP_DEFAULTS.height,
+        autoHideMenuBar: true,
+        backgroundColor: "#1e1e1e",
+      },
+    };
   };
 }
 
-function openPopupWindow(tab, url) {
-  if (!win || win.isDestroyed()) return null;
-  const popupWin = new BrowserWindow({
-    parent: win,
-    width: POPUP_DEFAULTS.width,
-    height: POPUP_DEFAULTS.height,
-    autoHideMenuBar: true,
-    backgroundColor: "#1e1e1e",
-    webPreferences: {
-      partition: tab.config.partition || "default",
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-      spellcheck: true,
-    },
-  });
+function trackPopup(tab, popupWin) {
+  if (!popupWin || popupWin.isDestroyed()) return;
   if (tab.popups) tab.popups.add(popupWin);
   popupWin.on("closed", () => {
     if (tab.popups) tab.popups.delete(popupWin);
   });
 
   // Pop-ups aninhados (ex: Google aberto dentro do fluxo de verificação de telefone)
-  popupWin.webContents.setWindowOpenHandler(handleWindowOpen(tab));
+  const childWc = popupWin.webContents;
+  if (childWc && !childWc.isDestroyed()) {
+    childWc.setWindowOpenHandler(handleWindowOpen(tab));
+    childWc.on("did-create-window", (_nestedWin) => trackPopup(tab, _nestedWin));
+  }
   trackPopupAuthReload(tab, popupWin);
-
-  popupWin.loadURL(url);
-  popupWin.show();
-  popupWin.focus();
-  return popupWin;
 }
 
 function trackPopupAuthReload(tab, popupWin) {
@@ -296,8 +291,10 @@ function attachListeners(tab, wc, config) {
     }
   });
 
-  // Pop-ups de login hospedados em janelas filhas (mesma sessão da aba).
+  // Pop-ups de login: cria via action:"allow" (preserva opener e sessão da aba)
+  // e rastreia a janela criada para tratar auth-reload e limpeza.
   wc.setWindowOpenHandler(handleWindowOpen(tab));
+  wc.on("did-create-window", (childWin) => trackPopup(tab, childWin));
 
   wc.on("did-start-loading", () => {
     startWatchdog(tab);
