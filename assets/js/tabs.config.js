@@ -10,8 +10,8 @@ export const APP_MODES = {
 
 // Cada aba declara em quais modos aparece.
 export const TAB_CONFIGS = [
-  { id: "gemini", label: "Gemini", url: "https://gemini.google.com/app", partition: "persist:gemini", icon: "assets/icons/gemini.png", modes: [APP_MODES.PERSONAL] },
   { id: "chatgpt", label: "ChatGPT", url: "https://chat.openai.com", partition: "persist:chatgpt", icon: "assets/icons/chatgpt.png", modes: [APP_MODES.PERSONAL] },
+  { id: "gemini", label: "Gemini", url: "https://gemini.google.com/app", partition: "persist:gemini", icon: "assets/icons/gemini.png", modes: [APP_MODES.PERSONAL] },
   { id: "claude", label: "Claude", url: "https://claude.ai", partition: "persist:claude", icon: "assets/icons/claude.png", modes: [APP_MODES.PERSONAL, APP_MODES.DEVELOPER] },
   { id: "deepseek", label: "DeepSeek", url: "https://chat.deepseek.com", partition: "persist:deepseek", icon: "assets/icons/deepseek.png", modes: [APP_MODES.PERSONAL], preload: "assets/js/deepseek-preload.js", userAgent: "clean-chrome" },
   { id: "manus", label: "Manus", url: "https://manus.im/app", partition: "persist:manus", icon: "assets/icons/manus.png", modes: [APP_MODES.DEVELOPER] },
