@@ -166,8 +166,10 @@ function updateAppModeControls() {
   if (appModeIndicator) appModeIndicator.textContent = appMode === APP_MODES.DEVELOPER ? "D" : "P";
   const modeButton = document.getElementById("btn-app-mode");
   if (modeButton) {
-    const modeLabel = appMode === APP_MODES.DEVELOPER ? "Desenvolvedor" : "Pessoal";
-    modeButton.title = `Alternar modo: ${modeLabel}`;
+    const currentModeLabel = appMode === APP_MODES.DEVELOPER ? "Desenvolvedor" : "Pessoal";
+    const targetModeLabel = appMode === APP_MODES.DEVELOPER ? "Pessoal" : "Desenvolvedor";
+    modeButton.title = `Modo atual: ${currentModeLabel}. Clique para alternar para ${targetModeLabel}`;
+    modeButton.setAttribute("aria-label", modeButton.title);
   }
 }
 
