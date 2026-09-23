@@ -2,7 +2,7 @@
 // Renderer passa a comandar o host de WebContentsView (processo principal).
 // Não há mais <webview> no DOM; a UI cuida apenas de sidebar, modais, find bar e
 // indicadores de carregamento/recuperação.
-import { TAB_CONFIGS, TAB_BY_ID, APP_MODES, getTabsByMode, getAllowedTabIds } from "./tabs.config.js";
+import { TAB_CONFIGS, TAB_BY_ID, APP_MODES, getTabsByMode } from "./tabs.config.js";
 
 // Fallback apenas se init-settings não chegar; a fonte dos defaults é settingsManager.
 const FALLBACK_SETTINGS = {
@@ -16,7 +16,6 @@ let currentTabId = null;
 let minimizeToTray = FALLBACK_SETTINGS.minimizeToTray;
 let keepTabsActive = FALLBACK_SETTINGS.keepTabsActive;
 let appMode = FALLBACK_SETTINGS.appMode;
-let overlayActive = false;
 let settingsReady = false;
 
 // --- Find in page ---
@@ -109,7 +108,6 @@ function showWebviewRecoveryToast(message) {
 
 // --- Overlay (modais/find bar): avisa o host para esconder a IA ativa ---
 function setOverlay(active) {
-  overlayActive = active;
   window.electronAPI?.tabs?.setOverlay?.(active);
 }
 

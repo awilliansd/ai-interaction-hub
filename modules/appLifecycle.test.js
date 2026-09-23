@@ -1,5 +1,4 @@
 const appLifecycle = require('./appLifecycle');
-const { app } = require('electron');
 
 // Mock do módulo 'electron'
 jest.mock('electron', () => ({

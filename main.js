@@ -1,6 +1,5 @@
 // main.js
 const { app, session, ipcMain } = require("electron");
-const log = require("electron-log");
 
 // Importa os módulos
 const windowManager = require("./modules/windowManager");

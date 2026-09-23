@@ -1,17 +1,11 @@
 // modules/appLifecycle.js
-const { app } = require("electron");
-
 let isQuiting = false;
-let createWindowFunction = null;
-let settingsManagerInstance = null;
 
 // Função para inicializar o módulo com dependências
 function initializeAppLifecycle(appInstance, createWinFunc, settingsMgr) {
   if (!appInstance || !createWinFunc || !settingsMgr) {
     throw new Error("AppLifecycle: Dependências (app, createWindow, settingsManager) são necessárias.");
   }
-  createWindowFunction = createWinFunc;
-  settingsManagerInstance = settingsMgr;
 
   // Lógica para fechar a aplicação quando todas as janelas são fechadas
   // (exceto no macOS)

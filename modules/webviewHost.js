@@ -6,6 +6,11 @@ const { WebContentsView, Menu, MenuItem, session, app } = require("electron");
 const path = require("path");
 const log = require("electron-log");
 const Channels = require("./ipc-channels");
+const {
+  isAuthProviderHost,
+  isTabSiteHost: isTabSiteHostUrl,
+  normalizeConfig,
+} = require("./webviewHelpers");
 
 const SIDEBAR_WIDTH = 60;
 
@@ -74,10 +79,6 @@ function sendToRenderer(channel, ...args) {
 }
 
 // --- Sessão por IA ---
-function getSessionFor(partition) {
-  return session.fromPartition(partition);
-}
-
 function configureSessionPermissions(ses, tabId) {
   ses.setPermissionRequestHandler((_webContents, permission, callback) => {
     const allowed = ALLOWED_IA_PERMISSIONS.has(permission);
@@ -104,37 +105,12 @@ function configureSessionPermissions(ses, tabId) {
 // aba). Criar a janela manualmente (deny + new BrowserWindow) quebrava o opener,
 // deixando a pop-up numa tela preta sem callback.
 const POPUP_DEFAULTS = { width: 520, height: 640 };
-const AUTH_PROVIDER_ROOTS = [
-  "google.com",
-  "github.com",
-  "apple.com",
-  "facebook.com",
-  "microsoftonline.com",
-  "live.com",
-];
-
-function getRootHost(hostname) {
-  const parts = String(hostname || "")
-    .toLowerCase()
-    .replace(/^www\./, "")
-    .split(".");
-  return parts.slice(-2).join(".");
-}
-
-function isAuthProviderHost(hostname) {
-  return AUTH_PROVIDER_ROOTS.includes(getRootHost(hostname));
-}
 
 function isTabSiteHost(hostname, tab) {
-  try {
-    const base = getRootHost(new URL(tab.config.url).hostname);
-    return getRootHost(hostname) === base;
-  } catch (_e) {
-    return false;
-  }
+  return isTabSiteHostUrl(hostname, tab?.config?.url);
 }
 
-function handleWindowOpen(tab) {
+function handleWindowOpen() {
   return (details) => {
     if (!details || !details.url) return { action: "deny" };
     if (!win || win.isDestroyed()) return { action: "deny" };
@@ -161,7 +137,7 @@ function trackPopup(tab, popupWin) {
   // Pop-ups aninhados (ex: Google aberto dentro do fluxo de verificação de telefone)
   const childWc = popupWin.webContents;
   if (childWc && !childWc.isDestroyed()) {
-    childWc.setWindowOpenHandler(handleWindowOpen(tab));
+    childWc.setWindowOpenHandler(handleWindowOpen());
     childWc.on("did-create-window", (_nestedWin) => trackPopup(tab, _nestedWin));
   }
   trackPopupAuthReload(tab, popupWin);
@@ -178,7 +154,7 @@ function trackPopupAuthReload(tab, popupWin) {
   };
   const onNavigate = (url) => {
     if (handled) return;
-    let hostname = "";
+    let hostname;
     try { hostname = new URL(url).hostname; } catch (_e) { return; }
     if (isAuthProviderHost(hostname)) {
       sawAuthProvider = true;
@@ -302,7 +278,7 @@ function attachListeners(tab, wc, config) {
 
   // Pop-ups de login: cria via action:"allow" (preserva opener e sessão da aba)
   // e rastreia a janela criada para tratar auth-reload e limpeza.
-  wc.setWindowOpenHandler(handleWindowOpen(tab));
+  wc.setWindowOpenHandler(handleWindowOpen());
   wc.on("did-create-window", (childWin) => trackPopup(tab, childWin));
 
   wc.on("did-start-loading", () => {
@@ -454,21 +430,6 @@ function setKeepTabsActive(active) {
   for (const id of Array.from(tabs.keys())) {
     if (id !== activeTabId) destroyTab(id);
   }
-}
-
-function normalizeConfig(payload) {
-  if (!payload || !payload.id || !payload.url) {
-    throw new Error("webviewHost.showTab: payload inválido (id e url são obrigatórios).");
-  }
-  const config = {
-    id: payload.id,
-    url: payload.url,
-    label: payload.label || payload.id,
-    partition: payload.partition || `persist:${payload.id}`,
-  };
-  if (payload.preload) config.preload = payload.preload;
-  if (payload.userAgent) config.userAgent = payload.userAgent;
-  return config;
 }
 
 function reloadTab(payload) {
