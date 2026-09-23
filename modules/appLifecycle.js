@@ -27,25 +27,6 @@ function initializeAppLifecycle(appInstance, createWinFunc, settingsMgr) {
     console.log("Sinalizador isQuiting definido como true antes de sair.");
   });
 
-  // Lógica para lidar com o evento 'close' da janela principal
-  // Isso pode ser acoplado ao windowManager, mas centralizar aqui pode ser mais claro
-  // para a lógica de sair vs minimizar.
-  // Precisamos garantir que a mainWindow seja acessível ou que o windowManager
-  // chame uma função deste módulo.
-
-  // Exemplo: Se o windowManager emitir um evento ou chamar uma função:
-  // eventEmitter.on('main-window-close-request', (event) => {
-  //   const settings = settingsManagerInstance.loadSettings();
-  //   if (!isQuiting && settings.minimizeToTray) {
-  //     event.preventDefault(); // Previne o fechamento
-  //     // A ação de esconder a janela (mainWindow.hide()) deve ser feita pelo windowManager
-  //     console.log("Prevenindo fechamento da janela, minimizando para a bandeja.");
-  //   } else {
-  //     console.log("Permitindo fechamento da janela.");
-  //     // Não previne o fechamento, o app eventualmente sairá
-  //   }
-  // });
-
   console.log("Ciclo de vida da aplicação inicializado.");
 }
 

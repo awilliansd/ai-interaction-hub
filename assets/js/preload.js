@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     onSetAppModeDeveloper: (callback) => ipcRenderer.on("command:set-app-mode-developer", () => callback()),
     onShowAbout: (callback) => ipcRenderer.on("command:show-about", () => callback()),
     onExitApp: (callback) => ipcRenderer.on("command:exit-app", () => callback()),
+    onClearAppCache: (callback) => ipcRenderer.on("command:clear-app-cache", () => callback()),
   }
 });
 

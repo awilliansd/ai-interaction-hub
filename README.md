@@ -96,8 +96,7 @@ O instalador será gerado na pasta `dist/`.
 │   └── js/
 │       ├── renderer.js            # Lógica da interface (ES module)
 │       ├── tabs.config.js        # Configuração única das abas (URLs/partições/ícones/modos)
-│       ├── preload.js             # Preload para comunicação segura (contextBridge)
-│       └── deepseek-preload.js   # Preload específico para DeepSeek
+│       └── preload.js             # Preload para comunicação segura (contextBridge)
 ├── icons/                         # Ícones do aplicativo
 ├── modules/                       # Módulos principais do Electron
 │   ├── appLifecycle.js           # Gerenciamento do ciclo de vida
@@ -107,6 +106,7 @@ O instalador será gerado na pasta `dist/`.
 │   ├── settingsManager.js        # Gerenciamento de configurações (settings.json)
 │   ├── trayManager.js            # Gerenciamento da bandeja
 │   ├── updaterManager.js         # Atualizações automáticas
+│   ├── webviewHost.js            # Host das WebContentsView (abas de IA)
 │   └── windowManager.js          # Gerenciamento de janelas
 ├── scripts/
 │   └── generate-icons.js         # Script para gerar ícones

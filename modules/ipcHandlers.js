@@ -18,16 +18,6 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     return;
   }
 
-  // Recarregar uma aba específica (lógica do lado do renderer)
-  ipcMain.on(Channels.RELOAD_TAB, (event, tabId) => {
-    const win = require("./windowManager").getMainWindow();
-    if (win) {
-      win.webContents.send(Channels.RELOAD_TAB, tabId);
-    } else {
-      console.warn("IPC reload-tab: Janela principal não encontrada.");
-    }
-  });
-
   // Atualizar o título da janela com o nome da aba atual
   ipcMain.on(Channels.SET_WINDOW_TITLE, (event, tabName) => {
     const windowManager = require("./windowManager");
@@ -58,6 +48,8 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     const currentSettings = settingsManager.loadSettings();
     currentSettings.keepTabsActive = value;
     settingsManager.saveSettings(currentSettings);
+    const webviewHost = require("./webviewHost");
+    webviewHost.setKeepTabsActive(value);
     console.log(`Configuração 'keepTabsActive' salva como: ${value}`);
   });
 
@@ -67,13 +59,6 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     currentSettings.appMode = value;
     settingsManager.saveSettings(currentSettings);
     console.log(`Configuração 'appMode' salva como: ${value}`);
-  });
-
-  // Fechar a aplicação (alternativa a 'exit-app')
-  ipcMain.on("app:close", () => {
-    const appLifecycle = require("./appLifecycle");
-    appLifecycle.setIsQuiting(true);
-    app.quit();
   });
 
   // --- Handler get-app-version ---

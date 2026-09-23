@@ -58,6 +58,7 @@ if (!gotTheLock) {
 
     // Inicializa o host de WebContentsView (E1)
     webviewHost.initializeHost(mainWindow);
+    webviewHost.setKeepTabsActive(initialSettings.keepTabsActive);
 
     // Registra canais do host
     ipcMain.on(Channels.HOST_SHOW_TAB, (_e, payload) => webviewHost.showTab(payload));

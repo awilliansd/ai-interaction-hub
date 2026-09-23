@@ -1,14 +1,21 @@
 // assets/js/renderer.js (ES module)
-// Renderer passou a comandar o host de WebContentsView (processo principal).
+// Renderer passa a comandar o host de WebContentsView (processo principal).
 // Não há mais <webview> no DOM; a UI cuida apenas de sidebar, modais, find bar e
 // indicadores de carregamento/recuperação.
-import { TAB_CONFIGS, TAB_BY_ID, APP_MODES, getTabsByMode, getAllowedTabIds, DEFAULT_SETTINGS } from "./tabs.config.js";
+import { TAB_CONFIGS, TAB_BY_ID, APP_MODES, getTabsByMode, getAllowedTabIds } from "./tabs.config.js";
+
+// Fallback apenas se init-settings não chegar; a fonte dos defaults é settingsManager.
+const FALLBACK_SETTINGS = {
+  minimizeToTray: false,
+  keepTabsActive: false,
+  appMode: APP_MODES.PERSONAL,
+};
 
 // --- Estado de runtime ---
 let currentTabId = null;
-let minimizeToTray = DEFAULT_SETTINGS.minimizeToTray;
-let keepTabsActive = DEFAULT_SETTINGS.keepTabsActive;
-let appMode = DEFAULT_SETTINGS.appMode;
+let minimizeToTray = FALLBACK_SETTINGS.minimizeToTray;
+let keepTabsActive = FALLBACK_SETTINGS.keepTabsActive;
+let appMode = FALLBACK_SETTINGS.appMode;
 let overlayActive = false;
 let settingsReady = false;
 
@@ -325,11 +332,6 @@ function toggleKeepTabsActive() {
   const checkbox = document.getElementById("keep-tabs-active");
   keepTabsActive = !!checkbox?.checked;
   window.electronAPI?.settings?.setKeepTabsActive?.(keepTabsActive);
-  // Reconstrói a aba atual para reaplicar a estratégia (best-effort).
-  if (currentTabId) {
-    window.electronAPI?.tabs?.resetAll?.();
-    showTab(currentTabId);
-  }
 }
 
 function toggleAppMode() {
@@ -352,7 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   // Fallback caso init-settings não chegue.
   window.setTimeout(() => {
-    if (!settingsReady) initializeWithSettings(DEFAULT_SETTINGS);
+    if (!settingsReady) initializeWithSettings(FALLBACK_SETTINGS);
   }, 1500);
 
   // Listeners globais de UI
@@ -413,5 +415,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.electronAPI.commands.onSetAppModeDeveloper?.(() => setAppMode(APP_MODES.DEVELOPER));
     window.electronAPI.commands.onShowAbout?.(() => showAbout());
     window.electronAPI.commands.onExitApp?.(() => exitApp());
+    window.electronAPI.commands.onClearAppCache?.(() => clearAppCache());
   }
 });

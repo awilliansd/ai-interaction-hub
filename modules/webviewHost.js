@@ -39,6 +39,7 @@ let win = null;
 let tabs = new Map(); // tabId -> { view, config, retryState, recreateState, watchdog, findActive }
 let activeTabId = null;
 let overlayActive = false; // true quando um modal/find bar pediu para esconder a IA ativa
+let keepTabsActive = false; // false = descarta views em segundo plano ao trocar de aba
 
 function initializeHost(mainWindow) {
   win = mainWindow;
@@ -417,10 +418,14 @@ function showTab(payload) {
     tab.view.webContents.loadURL(config.url);
   }
 
-  // Esconde as outras abas
-  for (const [id, t] of tabs) {
-    if (id !== config.id) {
-      t.view.setVisible(false);
+  // Esconde (keepTabsActive) ou descarta as outras abas
+  for (const id of Array.from(tabs.keys())) {
+    if (id === config.id) continue;
+    if (keepTabsActive) {
+      const other = tabs.get(id);
+      if (other) other.view.setVisible(false);
+    } else {
+      destroyTab(id);
     }
   }
   activeTabId = config.id;
@@ -428,6 +433,16 @@ function showTab(payload) {
   layoutView(tab.view);
   // Re-adiciona para trazer ao topo
   win.contentView.addChildView(tab.view);
+}
+
+// Aplica a estratégia de memória: quando desativado, descarta as views
+// que não estão em foco (recarrega do zero ao voltar).
+function setKeepTabsActive(active) {
+  keepTabsActive = !!active;
+  if (keepTabsActive) return;
+  for (const id of Array.from(tabs.keys())) {
+    if (id !== activeTabId) destroyTab(id);
+  }
 }
 
 function normalizeConfig(payload) {
@@ -576,4 +591,5 @@ module.exports = {
   findClose,
   clearTabCache,
   clearAllPartitions,
+  setKeepTabsActive,
 };
