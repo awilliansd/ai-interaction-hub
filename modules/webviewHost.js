@@ -376,6 +376,9 @@ function attachListeners(tab, wc, config) {
     const matches = result?.matches ?? 0;
     sendToRenderer(Channels.TAB_FOUND, tabId, active, matches);
   });
+  wc.on("page-title-updated", (_e, title) => {
+    sendToRenderer(Channels.TAB_TITLE_UPDATED, tabId, title);
+  });
 }
 
 // --- View factory ---

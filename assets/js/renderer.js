@@ -29,6 +29,27 @@ let findActive = false;
 let recoveryToastEl = null;
 const WEBVIEW_RECOVERY_TOAST_MS = 4500;
 
+// --- Indicadores da sidebar (spinner + badge de não lido) ---
+const loadingTabs = new Set();
+const unreadTabs = new Map();
+
+function parseUnreadCount(title) {
+  const match = /\((\d+)\)/.exec(title || "");
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+function refreshTabButton(tabId) {
+  const btn = document.getElementById(`btn-${tabId}`);
+  if (!btn) return;
+  btn.classList.toggle("is-loading", loadingTabs.has(tabId));
+  const count = unreadTabs.get(tabId) || 0;
+  if (count > 0 && tabId !== currentTabId) {
+    btn.dataset.badge = String(count);
+  } else {
+    delete btn.dataset.badge;
+  }
+}
+
 // --- Helpers de config ---
 function tabLabel(id) { return (TAB_BY_ID[id] && TAB_BY_ID[id].label) || id; }
 function getAllowedTabs() { return getTabsByMode(appMode); }
@@ -277,6 +298,7 @@ function clearAppCache() {
 function showTab(tabId) {
   if (!isTabAllowed(tabId)) return;
   currentTabId = tabId;
+  unreadTabs.delete(tabId);
   document.body.setAttribute("data-current-tab", tabId);
   updateWindowTitleForTab(tabId);
   const descriptor = buildHostTab(tabId);
@@ -284,6 +306,7 @@ function showTab(tabId) {
   document.querySelectorAll("#sidebar button").forEach((btn) => btn.classList.remove("active-button"));
   const activeBtn = document.getElementById(`btn-${tabId}`);
   if (activeBtn) activeBtn.classList.add("active-button");
+  refreshTabButton(tabId);
 }
 
 // --- Find in Page ---
@@ -437,6 +460,21 @@ document.addEventListener("DOMContentLoaded", () => {
   window.electronAPI?.tabs?.onRecoveryToast?.((_id, message) => showWebviewRecoveryToast(message));
   window.electronAPI?.tabs?.onFound?.((_id, active, matches) => {
     if (findResultsEl) findResultsEl.textContent = `${active}/${matches}`;
+  });
+  window.electronAPI?.tabs?.onLoading?.((id, loading) => {
+    if (loading) loadingTabs.add(id);
+    else loadingTabs.delete(id);
+    refreshTabButton(id);
+  });
+  window.electronAPI?.tabs?.onReady?.((id) => {
+    loadingTabs.delete(id);
+    refreshTabButton(id);
+  });
+  window.electronAPI?.tabs?.onTitleUpdated?.((id, title) => {
+    const count = parseUnreadCount(title);
+    if (count > 0) unreadTabs.set(id, count);
+    else unreadTabs.delete(id);
+    refreshTabButton(id);
   });
 
   // Atalhos de abas vindos do host (view focada)

@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     onRecoveryToast: (callback) => ipcRenderer.on("tab:recovery-toast", (_e, id, msg) => callback(id, msg)),
     onFound: (callback) => ipcRenderer.on("tab:found", (_e, id, active, matches) => callback(id, active, matches)),
     onReady: (callback) => ipcRenderer.on("tab:ready", (_e, id) => callback(id)),
+    onTitleUpdated: (callback) => ipcRenderer.on("tab:title-updated", (_e, id, title) => callback(id, title)),
   },
   commands: {
     onReloadActiveTab: (callback) => ipcRenderer.on("command:reload-active-tab", () => callback()),

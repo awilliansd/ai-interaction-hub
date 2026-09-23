@@ -48,4 +48,5 @@ module.exports = {
   TAB_RECOVERY_TOAST: "tab:recovery-toast",
   TAB_FOUND: "tab:found",
   TAB_READY: "tab:ready",
+  TAB_TITLE_UPDATED: "tab:title-updated",
 };

@@ -288,6 +288,53 @@ body {
     font-size: 16px;
 }
 
+/* Indicadores da sidebar: spinner de carregamento e badge de não lido */
+#sidebar button.is-loading {
+    position: relative;
+}
+
+#sidebar button.is-loading::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    border: 2px solid #00ccff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: sidebar-spin 0.8s linear infinite;
+}
+
+#sidebar button[data-badge] {
+    position: relative;
+}
+
+#sidebar button[data-badge]::before {
+    content: attr(data-badge);
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    box-sizing: border-box;
+    background: #e53935;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 8px;
+    z-index: 1;
+}
+
+@keyframes sidebar-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 #webview-container {
     flex: 1;
     display: flex;
