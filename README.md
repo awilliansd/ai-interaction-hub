@@ -27,6 +27,9 @@
   - Modo Pessoal (abas focadas em IAs gerais)
   - Modo Desenvolvedor (abas focadas em ferramentas de desenvolvimento)
 
+- **Abas customizadas:** adicione IAs/sites extras pela interface (botão +), com nome, URL, modos e ícone
+- **Multi-conta:** contas extras por IA com sessão/partição própria (menu de contexto → "Adicionar conta…")
+- **Indicadores na sidebar:** spinner durante o carregamento e badge de mensagens não lidas
 - **Alternância rápida** entre assistentes via barra lateral
 - **Sidebar gerada dinamicamente** a partir de uma fonte única de configuração (`assets/js/tabs.config.js`)
 - **Barra de busca integrada** (Ctrl+F) funcionando para encontrar texto na aba ativa
@@ -167,12 +170,14 @@ O aplicativo utiliza Electron com uma arquitetura modular:
 
 ### Adicionando Novas IAs
 
-Para adicionar uma nova IA, edite **somente** `assets/js/tabs.config.js`:
+Para adicionar uma IA fixa no app, edite **somente** `assets/js/tabs.config.js`:
 
 1. Adicione uma entrada ao array `TAB_CONFIGS` com `id`, `label`, `url`, `partition`, `icon` e `modes`
 2. Adicione o ícone correspondente em `assets/icons/`
 
 A barra lateral e os modos da aplicação são gerados automaticamente a partir desse arquivo.
+
+Alternativamente, use o botão **+** da sidebar para adicionar abas customizadas pela interface (persistem em `settings.json`, sem editar código).
 
 ### Contribuição
 

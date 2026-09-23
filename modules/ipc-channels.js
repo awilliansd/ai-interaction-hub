@@ -16,6 +16,8 @@ module.exports = {
   GET_SETTINGS: "get-settings",
   SAVE_SETTINGS: "save-settings",
   SHOW_TAB_CONTEXT_MENU: "show-tab-context-menu",
+  PICK_TAB_ICON: "pick-tab-icon",
+  CLEAR_PARTITION: "clear-partition",
 
   // Comandos enviados do menu do processo principal para o renderer
   COMMAND_PREFIX: "command:",
@@ -30,6 +32,11 @@ module.exports = {
   CMD_CLEAR_APP_CACHE: "command:clear-app-cache",
   CMD_ACTIVATE_TAB_N: "command:activate-tab-n",
   CMD_CYCLE_TAB: "command:cycle-tab",
+  CMD_EDIT_CUSTOM_TAB: "command:edit-custom-tab",
+  CMD_REMOVE_CUSTOM_TAB: "command:remove-custom-tab",
+  CMD_ADD_ACCOUNT: "command:add-account",
+  CMD_RENAME_ACCOUNT: "command:rename-account",
+  CMD_REMOVE_ACCOUNT: "command:remove-account",
 
   // Host de WebContentsView (Etapa E1) — renderer -> main
   HOST_SHOW_TAB: "host:show-tab",

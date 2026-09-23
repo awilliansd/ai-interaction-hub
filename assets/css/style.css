@@ -335,6 +335,94 @@ body {
     }
 }
 
+/* Aba sem ícone: letra inicial */
+.icon-letter,
+#sidebar .tab-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background-color: #444;
+    color: #00ccff;
+    font-weight: 700;
+    font-size: 15px;
+    text-transform: uppercase;
+}
+
+#sidebar .tab-letter.account-letter {
+    background-color: #3a3a50;
+    color: #9fd0ff;
+}
+
+/* Editor de aba / prompt */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.modal-btn {
+    background-color: #404040;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 7px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.modal-btn:hover {
+    background-color: #505050;
+}
+
+.modal-btn.primary {
+    background-color: #0088aa;
+    border-color: #0088aa;
+}
+
+.modal-btn.primary:hover {
+    background-color: #00a4cc;
+}
+
+.icon-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.icon-preview {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    object-fit: contain;
+    background: #444;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#prompt-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#sidebar .tab-badge-dot {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 8px;
+    height: 8px;
+    background: #9fd0ff;
+    border-radius: 50%;
+    border: 1px solid #202020;
+}
+
 #webview-container {
     flex: 1;
     display: flex;

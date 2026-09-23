@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     setMinimizeToTray: (value) => ipcRenderer.send("set-minimize-to-tray", value),
     setKeepTabsActive: (value) => ipcRenderer.send("set-keep-tabs-active", value),
     setAppMode: (value) => ipcRenderer.send("set-app-mode", value),
+    get: () => ipcRenderer.invoke("get-settings"),
+    save: (settings) => ipcRenderer.invoke("save-settings", settings),
     onInit: (callback) => ipcRenderer.on("init-settings", (event, settings) => callback(settings)),
   },
   links: {
@@ -30,7 +32,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     findNext: (tabId, query, forward) => ipcRenderer.send("host:find-next", { id: tabId, query, forward }),
     findClose: (tabId) => ipcRenderer.send("host:find-close", { id: tabId }),
     clearTabCache: (tabId) => ipcRenderer.send("host:clear-tab-cache", { id: tabId }),
-    showContextMenu: (tabId, x, y) => ipcRenderer.invoke("show-tab-context-menu", tabId, x, y),
+    showContextMenu: (tabId, x, y, kind) => ipcRenderer.invoke("show-tab-context-menu", tabId, x, y, kind),
+    pickIcon: () => ipcRenderer.invoke("pick-tab-icon"),
+    clearPartition: (partition) => ipcRenderer.send("clear-partition", partition),
     onLoading: (callback) => ipcRenderer.on("tab:loading", (_e, id, loading) => callback(id, loading)),
     onRecoveryToast: (callback) => ipcRenderer.on("tab:recovery-toast", (_e, id, msg) => callback(id, msg)),
     onFound: (callback) => ipcRenderer.on("tab:found", (_e, id, active, matches) => callback(id, active, matches)),
@@ -49,6 +53,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     onClearAppCache: (callback) => ipcRenderer.on("command:clear-app-cache", () => callback()),
     onActivateTabN: (callback) => ipcRenderer.on("command:activate-tab-n", (_e, n) => callback(n)),
     onCycleTab: (callback) => ipcRenderer.on("command:cycle-tab", (_e, forward) => callback(forward)),
+    onEditCustomTab: (callback) => ipcRenderer.on("command:edit-custom-tab", (_e, tabId) => callback(tabId)),
+    onRemoveCustomTab: (callback) => ipcRenderer.on("command:remove-custom-tab", (_e, tabId) => callback(tabId)),
+    onAddAccount: (callback) => ipcRenderer.on("command:add-account", (_e, baseTabId) => callback(baseTabId)),
+    onRenameAccount: (callback) => ipcRenderer.on("command:rename-account", (_e, accountId) => callback(accountId)),
+    onRemoveAccount: (callback) => ipcRenderer.on("command:remove-account", (_e, accountId) => callback(accountId)),
   }
 });
 

@@ -17,6 +17,8 @@ let minimizeToTray = FALLBACK_SETTINGS.minimizeToTray;
 let keepTabsActive = FALLBACK_SETTINGS.keepTabsActive;
 let appMode = FALLBACK_SETTINGS.appMode;
 let settingsReady = false;
+let customTabs = [];
+let accounts = [];
 
 // --- Find in page ---
 let findBarEl = null;
@@ -50,9 +52,45 @@ function refreshTabButton(tabId) {
 }
 
 // --- Helpers de config ---
-function tabLabel(id) { return (TAB_BY_ID[id] && TAB_BY_ID[id].label) || id; }
-function getAllowedTabs() { return getTabsByMode(appMode); }
-function isTabAllowed(tabId) { return getAllowedTabs().some((t) => t.id === tabId); }
+// Lista unificada: abas base (tabs.config) + customizadas + contas extras,
+// já filtradas pelo modo atual. Fonte de verdade para sidebar/atalhos/host.
+function getAvailableTabs() {
+  const base = getTabsByMode(appMode);
+  const result = [];
+  for (const tab of base) {
+    result.push({ ...tab, kind: "base" });
+    for (const acc of accounts) {
+      if (acc.baseTabId !== tab.id) continue;
+      result.push({
+        id: acc.id,
+        label: acc.label,
+        url: tab.url,
+        partition: acc.partition,
+        icon: tab.icon,
+        modes: tab.modes,
+        userAgent: tab.userAgent,
+        preload: tab.preload,
+        kind: "account",
+        baseTabId: tab.id,
+      });
+    }
+  }
+  for (const tab of customTabs) {
+    if (!Array.isArray(tab.modes) || !tab.modes.includes(appMode)) continue;
+    result.push({ ...tab, kind: "custom" });
+  }
+  return result;
+}
+
+function findAvailableTab(tabId) {
+  return getAvailableTabs().find((t) => t.id === tabId) || null;
+}
+
+function tabLabel(id) {
+  return findAvailableTab(id)?.label || (TAB_BY_ID[id] && TAB_BY_ID[id].label) || id;
+}
+function getAllowedTabs() { return getAvailableTabs(); }
+function isTabAllowed(tabId) { return findAvailableTab(tabId) !== null; }
 
 // User-Agent "limpo" para abas que pedem (ex: DeepSeek).
 function getCleanChromeUserAgent() {
@@ -63,7 +101,7 @@ function getCleanChromeUserAgent() {
 
 // Constrói o descritor enviado ao webviewHost (main).
 function buildHostTab(tabId) {
-  const tab = TAB_BY_ID[tabId];
+  const tab = findAvailableTab(tabId) || TAB_BY_ID[tabId];
   if (!tab) return null;
   const descriptor = {
     id: tab.id,
@@ -134,11 +172,7 @@ function updateAppModeControls() {
 }
 
 function applyAppMode() {
-  const allowedIds = getAllowedTabs().map((t) => t.id);
-  document.querySelectorAll("#sidebar .sidebar-top button[id^='btn-']").forEach((button) => {
-    const tabId = button.id.replace("btn-", "");
-    button.style.display = allowedIds.includes(tabId) ? "" : "none";
-  });
+  buildSidebar();
   updateAppModeControls();
 }
 
@@ -196,30 +230,43 @@ function buildSidebar() {
   const container = document.getElementById("sidebar-top");
   if (!container) return;
   container.innerHTML = "";
-  for (const tab of TAB_CONFIGS) {
+  for (const tab of getAvailableTabs()) {
     const button = document.createElement("button");
     button.id = `btn-${tab.id}`;
-    button.title = tab.label;
+    button.title = tab.kind === "account" ? `${tab.label} (conta extra)` : tab.label;
     button.addEventListener("click", () => showTab(tab.id));
-    button.addEventListener("contextmenu", (event) => showTabContextMenu(event, tab.id));
-    const img = document.createElement("img");
-    img.src = tab.icon;
-    img.alt = tab.label;
-    img.width = 32;
-    img.height = 32;
-    button.appendChild(img);
+    button.addEventListener("contextmenu", (event) => showTabContextMenu(event, tab.id, tab.kind));
+    if (tab.icon) {
+      const img = document.createElement("img");
+      img.src = tab.icon;
+      img.alt = tab.label;
+      img.width = 32;
+      img.height = 32;
+      button.appendChild(img);
+    } else {
+      const letter = document.createElement("span");
+      letter.className = `tab-letter${tab.kind === "account" ? " account-letter" : ""}`;
+      letter.textContent = (tab.label || "?").charAt(0);
+      button.appendChild(letter);
+    }
     container.appendChild(button);
+  }
+  if (currentTabId) {
+    const activeBtn = document.getElementById(`btn-${currentTabId}`);
+    if (activeBtn) activeBtn.classList.add("active-button");
+    for (const id of loadingTabs) refreshTabButton(id);
+    for (const id of unreadTabs.keys()) refreshTabButton(id);
   }
 }
 
 // --- Menu de contexto das abas (nativo via Electron Menu) ---
-function showTabContextMenu(event, tabId) {
+function showTabContextMenu(event, tabId, kind = "base") {
   if (!isTabAllowed(tabId)) return;
   event.preventDefault();
   event.stopPropagation();
   document.body.setAttribute("data-current-tab", tabId);
   currentTabId = tabId;
-  window.electronAPI?.tabs?.showContextMenu?.(tabId, event.x, event.y);
+  window.electronAPI?.tabs?.showContextMenu?.(tabId, event.x, event.y, kind);
 }
 function hideAllMenus() {
   document.querySelectorAll(".dropdown-menu").forEach((m) => m.classList.remove("show"));
@@ -256,6 +303,207 @@ function hideSettings() {
   setOverlay(false);
 }
 
+// --- Persistência de customTabs/contas ---
+async function persistTabData() {
+  try {
+    const current = await window.electronAPI?.settings?.get?.();
+    if (!current) return;
+    await window.electronAPI?.settings?.save?.({ ...current, customTabs, accounts });
+  } catch (_e) {
+    showWebviewRecoveryToast("Não foi possível salvar as configurações das abas.");
+  }
+}
+
+// --- Editor de aba customizada ---
+let editingCustomTabId = null;
+let editorIcon = null;
+
+function hideTabEditor() {
+  const modal = document.getElementById("tab-editor-modal");
+  if (modal) modal.style.display = "none";
+  setOverlay(false);
+}
+
+function refreshIconPreview() {
+  const img = document.getElementById("tab-icon-preview");
+  const letter = document.getElementById("tab-icon-fallback");
+  const label = document.getElementById("tab-label-input")?.value || "A";
+  if (!img || !letter) return;
+  if (editorIcon) {
+    img.src = editorIcon;
+    img.classList.remove("hidden");
+    letter.classList.add("hidden");
+  } else {
+    img.classList.add("hidden");
+    letter.textContent = label.charAt(0);
+    letter.classList.remove("hidden");
+  }
+}
+
+function openTabEditor(tabId = null) {
+  const modal = document.getElementById("tab-editor-modal");
+  if (!modal) return;
+  editingCustomTabId = tabId;
+  const existing = tabId ? customTabs.find((t) => t.id === tabId) : null;
+  document.getElementById("tab-editor-title").textContent = existing ? "Editar aba" : "Adicionar aba";
+  document.getElementById("tab-label-input").value = existing?.label || "";
+  document.getElementById("tab-url-input").value = existing?.url || "";
+  const modes = existing?.modes || [APP_MODES.PERSONAL];
+  document.getElementById("tab-mode-personal").checked = modes.includes(APP_MODES.PERSONAL);
+  document.getElementById("tab-mode-developer").checked = modes.includes(APP_MODES.DEVELOPER);
+  editorIcon = existing?.icon || null;
+  refreshIconPreview();
+  modal.style.display = "flex";
+  hideAllMenus();
+  setOverlay(true);
+}
+
+function saveCustomTab() {
+  const label = document.getElementById("tab-label-input")?.value?.trim();
+  const url = document.getElementById("tab-url-input")?.value?.trim();
+  const personal = document.getElementById("tab-mode-personal")?.checked;
+  const developer = document.getElementById("tab-mode-developer")?.checked;
+  if (!label || !url) {
+    showWebviewRecoveryToast("Preencha nome e URL da aba.");
+    return;
+  }
+  try {
+    const parsed = new URL(url);
+    if (!/^https?:$/.test(parsed.protocol)) throw new Error("protocolo");
+  } catch (_e) {
+    showWebviewRecoveryToast("URL inválida (use http:// ou https://).");
+    return;
+  }
+  const modes = [];
+  if (personal) modes.push(APP_MODES.PERSONAL);
+  if (developer) modes.push(APP_MODES.DEVELOPER);
+  if (modes.length === 0) modes.push(APP_MODES.PERSONAL);
+
+  if (editingCustomTabId) {
+    customTabs = customTabs.map((t) =>
+      t.id === editingCustomTabId ? { ...t, label, url, modes, icon: editorIcon || undefined } : t
+    );
+  } else {
+    const id = `custom-${Date.now().toString(36)}`;
+    const entry = { id, label, url, modes, partition: `persist:${id}` };
+    if (editorIcon) entry.icon = editorIcon;
+    customTabs.push(entry);
+  }
+  persistTabData().then(() => {
+    applyAppMode();
+    hideTabEditor();
+    if (!currentTabId || !isTabAllowed(currentTabId)) {
+      const first = getAllowedTabs()[0];
+      if (first) showTab(first.id);
+    }
+  });
+}
+
+async function pickTabIcon() {
+  try {
+    const dataUrl = await window.electronAPI?.tabs?.pickIcon?.();
+    if (dataUrl) {
+      editorIcon = dataUrl;
+      refreshIconPreview();
+    }
+  } catch (_e) {
+    showWebviewRecoveryToast("Não foi possível carregar o ícone.");
+  }
+}
+
+function removeCustomTab(tabId) {
+  const tab = customTabs.find((t) => t.id === tabId);
+  if (!tab) return;
+  if (!confirm(`Remover a aba "${tab.label}"? Os dados da sessão serão mantidos até a limpeza de cache.`)) return;
+  customTabs = customTabs.filter((t) => t.id !== tabId);
+  if (currentTabId === tabId) currentTabId = null;
+  persistTabData().then(() => {
+    applyAppMode();
+    if (!currentTabId || !isTabAllowed(currentTabId)) {
+      const first = getAllowedTabs()[0];
+      if (first) showTab(first.id);
+    }
+  });
+}
+
+// --- Contas extras (multi-conta) ---
+let promptResolve = null;
+
+function hidePrompt() {
+  const modal = document.getElementById("prompt-modal");
+  if (modal) modal.style.display = "none";
+  setOverlay(false);
+  if (promptResolve) {
+    const resolve = promptResolve;
+    promptResolve = null;
+    resolve(null);
+  }
+}
+
+function showPrompt(title, hint, initialValue = "") {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("prompt-modal");
+    if (!modal) { resolve(null); return; }
+    if (promptResolve) promptResolve(null);
+    promptResolve = resolve;
+    document.getElementById("prompt-title").textContent = title;
+    document.getElementById("prompt-hint").textContent = hint || "";
+    document.getElementById("prompt-input").value = initialValue;
+    modal.style.display = "flex";
+    setOverlay(true);
+    setTimeout(() => document.getElementById("prompt-input")?.focus(), 50);
+  });
+}
+
+function submitPrompt() {
+  const value = document.getElementById("prompt-input")?.value?.trim() || "";
+  const resolve = promptResolve;
+  promptResolve = null;
+  hidePrompt();
+  if (resolve) resolve(value || null);
+}
+
+async function addAccount(baseTabId) {
+  const base = TAB_BY_ID[baseTabId];
+  if (!base) return;
+  const name = await showPrompt(
+    "Nova conta",
+    `Conta extra para ${base.label} (partição de sessão própria).`
+  );
+  if (!name) return;
+  const id = `acc-${baseTabId}-${Date.now().toString(36)}`;
+  accounts.push({ id, baseTabId, label: name, partition: `persist:${id}` });
+  await persistTabData();
+  applyAppMode();
+  showTab(id);
+}
+
+async function renameAccount(accountId) {
+  const acc = accounts.find((a) => a.id === accountId);
+  if (!acc) return;
+  const name = await showPrompt("Renomear conta", "", acc.label);
+  if (!name) return;
+  acc.label = name;
+  await persistTabData();
+  applyAppMode();
+}
+
+function removeAccount(accountId) {
+  const acc = accounts.find((a) => a.id === accountId);
+  if (!acc) return;
+  if (!confirm(`Remover a conta "${acc.label}"? A partição de sessão será apagada (você fará login novamente se recriar).`)) return;
+  window.electronAPI?.tabs?.clearPartition?.(acc.partition);
+  accounts = accounts.filter((a) => a.id !== accountId);
+  if (currentTabId === accountId) currentTabId = null;
+  persistTabData().then(() => {
+    applyAppMode();
+    if (!currentTabId || !isTabAllowed(currentTabId)) {
+      const first = getAllowedTabs()[0];
+      if (first) showTab(first.id);
+    }
+  });
+}
+
 function exitApp() { window.electronAPI?.app?.exit?.(); }
 function openGitHub() { window.electronAPI?.links?.openGitHub?.(); }
 function getCurrentYear() { return new Date().getFullYear(); }
@@ -285,9 +533,13 @@ function reloadCurrentTab() {
 }
 function clearAppCache() {
   if (confirm("Isso irá limpar todo o cache e dados de navegação (incluindo logins) e reiniciar a aplicação. Deseja continuar?")) {
-    // Passa as partições de todas as abas para o main limpar os logins das IAs
-    // (persist:*) e não só a sessão padrão do sidebar.
-    const partitions = Array.from(new Set(TAB_CONFIGS.map((t) => t.partition).filter(Boolean)));
+    // Passa as partições de todas as abas (base + custom + contas) para o
+    // main limpar os logins (persist:*) e não só a sessão padrão do sidebar.
+    const partitions = Array.from(new Set([
+      ...TAB_CONFIGS.map((t) => t.partition),
+      ...customTabs.map((t) => t.partition),
+      ...accounts.map((a) => a.partition),
+    ].filter(Boolean)));
     window.electronAPI?.app?.clearCache?.(partitions);
   }
 }
@@ -365,6 +617,8 @@ function applySettings(settings) {
   if (settings && typeof settings.appMode === "string" && (settings.appMode === APP_MODES.PERSONAL || settings.appMode === APP_MODES.DEVELOPER)) {
     appMode = settings.appMode;
   }
+  if (settings && Array.isArray(settings.customTabs)) customTabs = settings.customTabs;
+  if (settings && Array.isArray(settings.accounts)) accounts = settings.accounts;
   applyAppMode();
 }
 
@@ -426,6 +680,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const which = el.getAttribute("data-close");
       if (which === "settings") hideSettings();
       else if (which === "about") hideAbout();
+      else if (which === "tab-editor") hideTabEditor();
+      else if (which === "prompt") hidePrompt();
     });
   });
 
@@ -433,6 +689,26 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-app-mode")?.addEventListener("click", cycleAppMode);
   document.getElementById("btn-clear-cache")?.addEventListener("click", clearAppCache);
   document.getElementById("btn-settings")?.addEventListener("click", showSettings);
+  document.getElementById("btn-add-tab")?.addEventListener("click", () => openTabEditor());
+
+  // Editor de aba customizada
+  document.getElementById("tab-editor-save")?.addEventListener("click", saveCustomTab);
+  document.getElementById("tab-editor-cancel")?.addEventListener("click", hideTabEditor);
+  document.getElementById("tab-icon-pick")?.addEventListener("click", pickTabIcon);
+  document.getElementById("tab-icon-clear")?.addEventListener("click", () => {
+    editorIcon = null;
+    refreshIconPreview();
+  });
+  document.getElementById("tab-label-input")?.addEventListener("input", () => {
+    if (!editorIcon) refreshIconPreview();
+  });
+
+  // Prompt (nome de conta)
+  document.getElementById("prompt-ok")?.addEventListener("click", submitPrompt);
+  document.getElementById("prompt-cancel")?.addEventListener("click", hidePrompt);
+  document.getElementById("prompt-input")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitPrompt();
+  });
 
   // Configurações
   document.getElementById("minimize-to-tray")?.addEventListener("change", toggleMinimizeToTray);
@@ -451,6 +727,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (findActive) { closeFindBar(); return; }
     hideSettings();
     hideAbout();
+    hideTabEditor();
+    hidePrompt();
     setOverlay(false);
   });
 
@@ -491,5 +769,10 @@ document.addEventListener("DOMContentLoaded", () => {
     window.electronAPI.commands.onShowAbout?.(() => showAbout());
     window.electronAPI.commands.onExitApp?.(() => exitApp());
     window.electronAPI.commands.onClearAppCache?.(() => clearAppCache());
+    window.electronAPI.commands.onEditCustomTab?.((tabId) => openTabEditor(tabId));
+    window.electronAPI.commands.onRemoveCustomTab?.((tabId) => removeCustomTab(tabId));
+    window.electronAPI.commands.onAddAccount?.((baseTabId) => addAccount(baseTabId));
+    window.electronAPI.commands.onRenameAccount?.((accountId) => renameAccount(accountId));
+    window.electronAPI.commands.onRemoveAccount?.((accountId) => removeAccount(accountId));
   }
 });
