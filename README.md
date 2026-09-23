@@ -140,6 +140,8 @@ Acesse o menu "Ajuda" → "Sobre" para informações sobre o aplicativo, versão
 
 ## Atalhos
 
+- **Ctrl + 1..9:** Ativa a N-ésima aba do modo atual
+- **Ctrl + Tab / Ctrl + Shift + Tab:** Próxima / aba anterior
 - **Ctrl + R:** Recarrega a aba ativa
 - **Ctrl + F:** Abre a barra de busca
 - **ESC:** Fecha modais e menus abertos

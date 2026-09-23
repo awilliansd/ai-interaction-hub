@@ -28,6 +28,8 @@ module.exports = {
   CMD_SHOW_ABOUT: "command:show-about",
   CMD_EXIT_APP: "command:exit-app",
   CMD_CLEAR_APP_CACHE: "command:clear-app-cache",
+  CMD_ACTIVATE_TAB_N: "command:activate-tab-n",
+  CMD_CYCLE_TAB: "command:cycle-tab",
 
   // Host de WebContentsView (Etapa E1) — renderer -> main
   HOST_SHOW_TAB: "host:show-tab",

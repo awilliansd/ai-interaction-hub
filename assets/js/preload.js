@@ -46,6 +46,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     onShowAbout: (callback) => ipcRenderer.on("command:show-about", () => callback()),
     onExitApp: (callback) => ipcRenderer.on("command:exit-app", () => callback()),
     onClearAppCache: (callback) => ipcRenderer.on("command:clear-app-cache", () => callback()),
+    onActivateTabN: (callback) => ipcRenderer.on("command:activate-tab-n", (_e, n) => callback(n)),
+    onCycleTab: (callback) => ipcRenderer.on("command:cycle-tab", (_e, forward) => callback(forward)),
   }
 });
 

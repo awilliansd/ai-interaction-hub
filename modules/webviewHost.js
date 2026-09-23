@@ -280,15 +280,23 @@ function attachListeners(tab, wc, config) {
   // Recarregamento por atalho (Ctrl/Cmd+R): intercepta a tecla antes da página
   // para garantir o reload mesmo quando o site engole o atalho ou o acelerador
   // do menu não dispara com a WebContentsView focada.
+  // Mesma lógica para os atalhos de troca de aba (Ctrl+1..9, Ctrl+Tab).
   wc.on("before-input-event", (event, input) => {
-    if (
-      input.type === "keyDown" &&
-      input.key.toLowerCase() === "r" &&
-      (input.control || input.meta) &&
-      !input.alt
-    ) {
+    if (input.type !== "keyDown" || input.alt) return;
+    const mod = input.control || input.meta;
+    if (mod && !input.shift && input.key.toLowerCase() === "r") {
       event.preventDefault();
       try { wc.reloadIgnoringCache(); } catch (_e) { wc.reload(); }
+      return;
+    }
+    if (mod && !input.shift && /^[1-9]$/.test(input.key)) {
+      event.preventDefault();
+      sendToRenderer(Channels.CMD_ACTIVATE_TAB_N, parseInt(input.key, 10));
+      return;
+    }
+    if (mod && input.key === "Tab") {
+      event.preventDefault();
+      sendToRenderer(Channels.CMD_CYCLE_TAB, !input.shift);
     }
   });
 

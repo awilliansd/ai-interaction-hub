@@ -138,6 +138,40 @@ function cycleAppMode() {
   setAppMode(appMode === APP_MODES.PERSONAL ? APP_MODES.DEVELOPER : APP_MODES.PERSONAL);
 }
 
+// --- Atalhos de troca de abas ---
+// Ctrl+1..9 ativa a N-ésima aba do modo atual; Ctrl+Tab / Ctrl+Shift+Tab
+// circular entre elas. O listener no host cobre a aba focada; o de keydown
+// cobre o foco na UI (sidebar/modais).
+function activateTabByNumber(n) {
+  const tab = getAllowedTabs()[n - 1];
+  if (tab) showTab(tab.id);
+}
+
+function cycleTab(forward) {
+  const tabs = getAllowedTabs();
+  if (tabs.length === 0) return;
+  const idx = tabs.findIndex((t) => t.id === currentTabId);
+  const next = forward
+    ? (idx + 1) % tabs.length
+    : (idx - 1 + tabs.length) % tabs.length;
+  showTab(tabs[next].id);
+}
+
+function handleTabShortcutKey(e) {
+  if ((!e.ctrlKey && !e.metaKey) || e.altKey) return false;
+  if (/^[1-9]$/.test(e.key)) {
+    e.preventDefault();
+    activateTabByNumber(parseInt(e.key, 10));
+    return true;
+  }
+  if (e.key === "Tab") {
+    e.preventDefault();
+    cycleTab(!e.shiftKey);
+    return true;
+  }
+  return false;
+}
+
 // --- Sidebar dinâmica ---
 function buildSidebar() {
   const container = document.getElementById("sidebar-top");
@@ -405,8 +439,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (findResultsEl) findResultsEl.textContent = `${active}/${matches}`;
   });
 
+  // Atalhos de abas vindos do host (view focada)
+  window.electronAPI?.commands?.onActivateTabN?.((n) => activateTabByNumber(n));
+  window.electronAPI?.commands?.onCycleTab?.((forward) => cycleTab(forward));
+  document.addEventListener("keydown", handleTabShortcutKey);
+
   // Comandos do menu principal
-  if (window.electronAPI?.commands) {
+  if (window.electronAPI.commands) {
     window.electronAPI.commands.onReloadActiveTab?.(() => reloadCurrentTab());
     window.electronAPI.commands.onFindInActiveTab?.(() => openFindBar());
     window.electronAPI.commands.onShowSettings?.(() => showSettings());
