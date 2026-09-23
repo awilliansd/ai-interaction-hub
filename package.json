@@ -3,6 +3,7 @@
   "version": "2.3.1",
   "description": "Hub unificado para múltiplos chats de IA",
   "author": "Alessandro Willian",
+  "license": "MIT",
   "main": "main.js",
   "engines": {
     "node": ">=22",

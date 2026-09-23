@@ -115,6 +115,7 @@ O instalador será gerado na pasta `dist/`.
 │   └── generate-icons.js         # Script para gerar ícones
 ├── modules/*.test.js             # Testes automatizados (Jest)
 ├── index.html                    # Página principal
+├── LICENSE                       # Licença MIT
 ├── main.js                       # Arquivo principal do Electron
 ├── package.json                  # Configurações do projeto
 └── README.md                     # Este arquivo
@@ -212,6 +213,21 @@ Se o aplicativo estiver lento:
 - Adicionar abas dinâmicas com ícones customizados via drag-and-drop
 - Histórico de conversas offline
 - Temas personalizáveis
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+### Team roles
+
+- **Committers and reviewers:** [Alessandro Willian (@awilliansd)](https://github.com/awilliansd)
+- **Approvers:** [Alessandro Willian (@awilliansd)](https://github.com/awilliansd)
+
+### Privacy policy
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+
+The application embeds third-party web services (assistants de IA) accessed as tabs; use of those services is subject to each provider's own privacy policy. Builds are verified via GitHub Releases ([privacy policy](https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement)) and updates are fetched through [electron-updater](https://www.electron.build/auto-update) from the same releases page.
 
 ## Licença
 
