@@ -50,6 +50,8 @@
       <div class="setting-item">
         <h3>Comandos de ajuda</h3>
         <p class="shortcut-info"><strong>Botão direito:</strong> Menu de contexto nas abas</p>
+        <p class="shortcut-info"><strong>CTRL+1..9:</strong> Atalho para a aba correspondente</p>
+        <p class="shortcut-info"><strong>CTRL+Tab / CTRL+Shift+Tab:</strong> Próxima / aba anterior</p>
         <p class="shortcut-info"><strong>CTRL+R:</strong> Recarregar aba</p>
         <p class="shortcut-info"><strong>CTRL+F:</strong> Buscar na aba</p>
         <p class="shortcut-info"><strong>ESC:</strong> Fechar busca / modais</p>
@@ -70,13 +72,76 @@
     </div>
   </div>
 
+  <!-- Modal Editor de Aba Customizada -->
+  <div id="tab-editor-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" data-close="tab-editor">&times;</span>
+      <h2 id="tab-editor-title">Adicionar aba</h2>
+      <div class="setting-item">
+        <p class="setting-title">Nome</p>
+        <input type="text" id="tab-label-input" class="setting-select" placeholder="Ex.: Meu Chat" maxlength="40">
+      </div>
+      <div class="setting-item">
+        <p class="setting-title">URL</p>
+        <input type="url" id="tab-url-input" class="setting-select" placeholder="https://exemplo.com">
+      </div>
+      <div class="setting-item">
+        <p class="setting-title">Modos</p>
+        <label class="setting-label">
+          <input type="checkbox" id="tab-mode-personal" checked>
+          <span class="checkmark"></span>
+          Pessoal
+        </label>
+        <label class="setting-label">
+          <input type="checkbox" id="tab-mode-developer">
+          <span class="checkmark"></span>
+          Desenvolvedor
+        </label>
+      </div>
+      <div class="setting-item">
+        <p class="setting-title">Ícone (opcional)</p>
+        <div class="icon-picker-row">
+          <img id="tab-icon-preview" class="icon-preview hidden" alt="Prévia do ícone">
+          <span id="tab-icon-fallback" class="icon-preview icon-letter hidden">A</span>
+          <button type="button" id="tab-icon-pick" class="modal-btn">Escolher imagem…</button>
+          <button type="button" id="tab-icon-clear" class="modal-btn">Remover</button>
+        </div>
+        <p class="setting-description">Sem ícone, a letra inicial do nome é usada.</p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="tab-editor-cancel" class="modal-btn">Cancelar</button>
+        <button type="button" id="tab-editor-save" class="modal-btn primary">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de prompt (nome de conta) -->
+  <div id="prompt-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" data-close="prompt">&times;</span>
+      <h2 id="prompt-title">Nome</h2>
+      <div class="setting-item">
+        <input type="text" id="prompt-input" class="setting-select" maxlength="40">
+        <p id="prompt-hint" class="setting-description"></p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="prompt-cancel" class="modal-btn">Cancelar</button>
+        <button type="button" id="prompt-ok" class="modal-btn primary">OK</button>
+      </div>
+    </div>
+  </div>
+
   <div id="main-content">
     <div id="sidebar">
       <div class="sidebar-top" id="sidebar-top"></div>
 
       <div class="sidebar-bottom">
-        <button id="btn-app-mode" class="text-icon" title="Modo atual: Pessoal. Clique para alternar para Desenvolvedor" aria-label="Modo atual: Pessoal. Clique para alternar para Desenvolvedor">
-          <span id="app-mode-indicator">P</span>
+        <button id="btn-add-tab" title="Adicionar aba personalizada">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h6v2z"/>
+          </svg>
+        </button>
+        <button id="btn-app-mode" class="text-icon" title="Modo atual: Pessoal. Clique para alternar para Desenvolvedor" aria-label="Modo atual: Pessoal. Clique para alternar para Desenvolvedor" style="margin-top: 10px;">          <span id="app-mode-indicator">P</span>
         </button>
         <button id="btn-clear-cache" title="Limpar Cache e Reiniciar" style="margin-bottom: 10px;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="white">

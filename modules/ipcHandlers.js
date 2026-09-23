@@ -1,5 +1,7 @@
 // modules/ipcHandlers.js
-const { ipcMain, shell, Menu, MenuItem } = require("electron");
+const { ipcMain, shell, Menu, MenuItem, dialog } = require("electron");
+const fs = require("fs");
+const path = require("path");
 const Channels = require("./ipc-channels");
 
 const GITHUB_URL = "https://github.com/awilliansd";
@@ -17,16 +19,6 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     console.error("IPC Handlers: settingsManager não fornecido.");
     return;
   }
-
-  // Recarregar uma aba específica (lógica do lado do renderer)
-  ipcMain.on(Channels.RELOAD_TAB, (event, tabId) => {
-    const win = require("./windowManager").getMainWindow();
-    if (win) {
-      win.webContents.send(Channels.RELOAD_TAB, tabId);
-    } else {
-      console.warn("IPC reload-tab: Janela principal não encontrada.");
-    }
-  });
 
   // Atualizar o título da janela com o nome da aba atual
   ipcMain.on(Channels.SET_WINDOW_TITLE, (event, tabName) => {
@@ -58,6 +50,8 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     const currentSettings = settingsManager.loadSettings();
     currentSettings.keepTabsActive = value;
     settingsManager.saveSettings(currentSettings);
+    const webviewHost = require("./webviewHost");
+    webviewHost.setKeepTabsActive(value);
     console.log(`Configuração 'keepTabsActive' salva como: ${value}`);
   });
 
@@ -67,13 +61,6 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
     currentSettings.appMode = value;
     settingsManager.saveSettings(currentSettings);
     console.log(`Configuração 'appMode' salva como: ${value}`);
-  });
-
-  // Fechar a aplicação (alternativa a 'exit-app')
-  ipcMain.on("app:close", () => {
-    const appLifecycle = require("./appLifecycle");
-    appLifecycle.setIsQuiting(true);
-    app.quit();
   });
 
   // --- Handler get-app-version ---
@@ -102,23 +89,88 @@ function initializeIpcHandlers(mainWindow, app, settingsManager) {
   });
 
   // Menu de contexto nativo das abas da sidebar
-  ipcMain.handle(Channels.SHOW_TAB_CONTEXT_MENU, (event, tabId, x, y) => {
+  ipcMain.handle(Channels.SHOW_TAB_CONTEXT_MENU, (event, tabId, x, y, kind) => {
     const windowManager = require("./windowManager");
     const win = windowManager.getMainWindow();
     if (!win) return;
 
+    const send = (channel, ...args) => win.webContents.send(channel, ...args);
     const menu = new Menu();
     menu.append(new MenuItem({
       label: "Recarregar",
       click: () => {
-        // Reload direto no host da view (o canal 'reload-tab' enviado ao
-        // renderer não é tratado por ninguém — caminho quebrado).
         const webviewHost = require("./webviewHost");
         webviewHost.reloadTab({ id: tabId });
       },
     }));
 
+    if (kind === "base") {
+      menu.append(new MenuItem({ type: "separator" }));
+      menu.append(new MenuItem({
+        label: "Adicionar conta…",
+        click: () => send(Channels.CMD_ADD_ACCOUNT, tabId),
+      }));
+    } else if (kind === "custom") {
+      menu.append(new MenuItem({ type: "separator" }));
+      menu.append(new MenuItem({
+        label: "Editar aba…",
+        click: () => send(Channels.CMD_EDIT_CUSTOM_TAB, tabId),
+      }));
+      menu.append(new MenuItem({
+        label: "Remover aba",
+        click: () => send(Channels.CMD_REMOVE_CUSTOM_TAB, tabId),
+      }));
+    } else if (kind === "account") {
+      menu.append(new MenuItem({ type: "separator" }));
+      menu.append(new MenuItem({
+        label: "Renomear conta…",
+        click: () => send(Channels.CMD_RENAME_ACCOUNT, tabId),
+      }));
+      menu.append(new MenuItem({
+        label: "Remover conta…",
+        click: () => send(Channels.CMD_REMOVE_ACCOUNT, tabId),
+      }));
+    }
+
     menu.popup({ window: win, x, y });
+  });
+
+  // Seletor de imagem de ícone para abas customizadas (devolve data URL)
+  ipcMain.removeHandler(Channels.PICK_TAB_ICON);
+  ipcMain.handle(Channels.PICK_TAB_ICON, async () => {
+    const win = require("./windowManager").getMainWindow();
+    const result = await dialog.showOpenDialog(win || undefined, {
+      title: "Escolher ícone da aba",
+      properties: ["openFile"],
+      filters: [{ name: "Imagens", extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg", "ico"] }],
+    });
+    if (result.canceled || !result.filePaths?.[0]) return null;
+    try {
+      const filePath = result.filePaths[0];
+      const data = fs.readFileSync(filePath);
+      const ext = path.extname(filePath).slice(1).toLowerCase() || "png";
+      const mime = ext === "jpg" ? "jpeg" : ext;
+      return `data:image/${mime};base64,${data.toString("base64")}`;
+    } catch (error) {
+      console.error("Erro ao ler ícone:", error);
+      return null;
+    }
+  });
+
+  // Limpa a partição de uma conta removida (só após confirmação do renderer)
+  ipcMain.on(Channels.CLEAR_PARTITION, async (_event, partition) => {
+    if (typeof partition !== "string" || !partition) return;
+    try {
+      const { session } = require("electron");
+      const ses = session.fromPartition(partition);
+      await ses.clearCache();
+      await ses.clearStorageData({
+        storages: ['cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers', 'cachestorage']
+      });
+      console.log(`[IPC Handler] Partição '${partition}' limpa.`);
+    } catch (error) {
+      console.error("Erro ao limpar partição:", error);
+    }
   });
 
   ipcMain.on(Channels.CLEAR_APP_CACHE, async (_event, partitions) => {

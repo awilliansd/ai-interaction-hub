@@ -56,14 +56,26 @@ describe('settingsManager', () => {
 
       const loadedSettings = settingsManager.loadSettings();
       // Valores ausentes são preenchidos com os defaults (merge normalizado)
-      expect(loadedSettings).toEqual({ minimizeToTray: true, keepTabsActive: false, appMode: "personal" });
+      expect(loadedSettings).toEqual({
+        minimizeToTray: true,
+        keepTabsActive: false,
+        appMode: "personal",
+        customTabs: [],
+        accounts: []
+      });
     });
 
     it('deve retornar as configurações padrão se o arquivo não existir', () => {
       fs.existsSync.mockReturnValue(false);
 
       const loadedSettings = settingsManager.loadSettings();
-      expect(loadedSettings).toEqual({ minimizeToTray: false, keepTabsActive: false, appMode: "personal" });
+      expect(loadedSettings).toEqual({
+        minimizeToTray: false,
+        keepTabsActive: false,
+        appMode: "personal",
+        customTabs: [],
+        accounts: []
+      });
     });
 
     it('deve retornar as configurações padrão se ocorrer um erro de parse', () => {
@@ -82,7 +94,13 @@ describe('settingsManager', () => {
       consoleErrorSpy.mockRestore();
 
       // Lembre-se de usar a correção do objeto padrão aqui também:
-      expect(loadedSettings).toEqual({ minimizeToTray: false, keepTabsActive: false, appMode: "personal" });
+      expect(loadedSettings).toEqual({
+        minimizeToTray: false,
+        keepTabsActive: false,
+        appMode: "personal",
+        customTabs: [],
+        accounts: []
+      });
     });
   });
 
@@ -100,7 +118,13 @@ describe('settingsManager', () => {
       // Apenas as chaves conhecidas são persistidas (normalização/schema)
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         expectedPath,
-        JSON.stringify(settings, null, 2),
+        JSON.stringify({
+          minimizeToTray: true,
+          keepTabsActive: true,
+          appMode: "developer",
+          customTabs: [],
+          accounts: []
+        }, null, 2),
         'utf-8'
       );
       expect(result).toBe(true);
@@ -114,7 +138,52 @@ describe('settingsManager', () => {
 
       const writtenArgs = fs.writeFileSync.mock.calls.find(c => c[0] === expectedPath);
       const persisted = JSON.parse(writtenArgs[1]);
-      expect(persisted).toEqual({ minimizeToTray: true, keepTabsActive: false, appMode: "personal" });
+      expect(persisted).toEqual({
+        minimizeToTray: true,
+        keepTabsActive: false,
+        appMode: "personal",
+        customTabs: [],
+        accounts: []
+      });
+    });
+
+    it('deve persistir customTabs válidas e descartar inválidas', () => {
+      const settings = {
+        customTabs: [
+          { id: 'custom-1', label: 'Minha IA', url: 'https://exemplo.com', modes: ['personal'] },
+          { id: 'x', label: 'sem url' },
+          null,
+        ],
+      };
+
+      settingsManager.saveSettings(settings);
+
+      const written = JSON.parse(fs.writeFileSync.mock.calls[0][1]);
+      expect(written.customTabs).toEqual([
+        {
+          id: 'custom-1',
+          label: 'Minha IA',
+          url: 'https://exemplo.com',
+          modes: ['personal'],
+          partition: 'persist:custom-1',
+        },
+      ]);
+    });
+
+    it('deve persistir accounts válidas', () => {
+      const settings = {
+        accounts: [
+          { id: 'acc-1', baseTabId: 'chatgpt', label: 'Trabalho', partition: 'persist:acc-1' },
+          { id: 'bad' },
+        ],
+      };
+
+      settingsManager.saveSettings(settings);
+
+      const written = JSON.parse(fs.writeFileSync.mock.calls[0][1]);
+      expect(written.accounts).toEqual([
+        { id: 'acc-1', baseTabId: 'chatgpt', label: 'Trabalho', partition: 'persist:acc-1' },
+      ]);
     });
   });
 });

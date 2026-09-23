@@ -102,10 +102,7 @@ function buildAppMenu(actions = {}) {
         { type: 'separator' },
         {
           label: 'Limpar Cache e Reiniciar',
-          click: () => {
-            const { ipcMain } = require('electron');
-            ipcMain.emit(Channels.CLEAR_APP_CACHE);
-          }
+          click: () => sendCommandToRenderer(Channels.CMD_CLEAR_APP_CACHE)
         },
         { role: 'toggleDevTools', label: 'Alternar Ferramentas de Desenvolvedor' }
       ]

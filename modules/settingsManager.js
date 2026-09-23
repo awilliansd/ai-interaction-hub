@@ -9,6 +9,8 @@ const DEFAULT_SETTINGS = {
   minimizeToTray: false,
   keepTabsActive: false,
   appMode: "personal",
+  customTabs: [],
+  accounts: [],
 };
 
 const APP_MODES = ["personal", "developer"];
@@ -27,7 +29,38 @@ function initialize(app) {
 }
 
 function getDefaultSettings() {
-  return { ...DEFAULT_SETTINGS };
+  return { ...DEFAULT_SETTINGS, customTabs: [], accounts: [] };
+}
+
+function normalizeCustomTabs(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((t) => t && typeof t.id === "string" && typeof t.url === "string" && typeof t.label === "string")
+    .map((t) => {
+      const tab = {
+        id: t.id,
+        label: t.label,
+        url: t.url,
+        modes: Array.isArray(t.modes)
+          ? t.modes.filter((m) => APP_MODES.includes(m))
+          : ["personal"],
+        partition: typeof t.partition === "string" && t.partition ? t.partition : `persist:${t.id}`,
+      };
+      if (typeof t.icon === "string" && t.icon) tab.icon = t.icon;
+      return tab;
+    });
+}
+
+function normalizeAccounts(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((a) => a && typeof a.id === "string" && typeof a.baseTabId === "string" && typeof a.label === "string")
+    .map((a) => ({
+      id: a.id,
+      baseTabId: a.baseTabId,
+      label: a.label,
+      partition: typeof a.partition === "string" && a.partition ? a.partition : `persist:${a.id}`,
+    }));
 }
 
 // Normaliza um objeto de configurações mesclando com os defaults e validando tipos.
@@ -44,6 +77,8 @@ function normalizeSettings(raw) {
   if (typeof raw.appMode === "string" && APP_MODES.includes(raw.appMode)) {
     base.appMode = raw.appMode;
   }
+  base.customTabs = normalizeCustomTabs(raw.customTabs);
+  base.accounts = normalizeAccounts(raw.accounts);
   return base;
 }
 

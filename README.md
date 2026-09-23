@@ -27,6 +27,9 @@
   - Modo Pessoal (abas focadas em IAs gerais)
   - Modo Desenvolvedor (abas focadas em ferramentas de desenvolvimento)
 
+- **Abas customizadas:** adicione IAs/sites extras pela interface (botão +), com nome, URL, modos e ícone
+- **Multi-conta:** contas extras por IA com sessão/partição própria (menu de contexto → "Adicionar conta…")
+- **Indicadores na sidebar:** spinner durante o carregamento e badge de mensagens não lidas
 - **Alternância rápida** entre assistentes via barra lateral
 - **Sidebar gerada dinamicamente** a partir de uma fonte única de configuração (`assets/js/tabs.config.js`)
 - **Barra de busca integrada** (Ctrl+F) funcionando para encontrar texto na aba ativa
@@ -96,8 +99,7 @@ O instalador será gerado na pasta `dist/`.
 │   └── js/
 │       ├── renderer.js            # Lógica da interface (ES module)
 │       ├── tabs.config.js        # Configuração única das abas (URLs/partições/ícones/modos)
-│       ├── preload.js             # Preload para comunicação segura (contextBridge)
-│       └── deepseek-preload.js   # Preload específico para DeepSeek
+│       └── preload.js             # Preload para comunicação segura (contextBridge)
 ├── icons/                         # Ícones do aplicativo
 ├── modules/                       # Módulos principais do Electron
 │   ├── appLifecycle.js           # Gerenciamento do ciclo de vida
@@ -107,6 +109,7 @@ O instalador será gerado na pasta `dist/`.
 │   ├── settingsManager.js        # Gerenciamento de configurações (settings.json)
 │   ├── trayManager.js            # Gerenciamento da bandeja
 │   ├── updaterManager.js         # Atualizações automáticas
+│   ├── webviewHost.js            # Host das WebContentsView (abas de IA)
 │   └── windowManager.js          # Gerenciamento de janelas
 ├── scripts/
 │   └── generate-icons.js         # Script para gerar ícones
@@ -140,6 +143,8 @@ Acesse o menu "Ajuda" → "Sobre" para informações sobre o aplicativo, versão
 
 ## Atalhos
 
+- **Ctrl + 1..9:** Ativa a N-ésima aba do modo atual
+- **Ctrl + Tab / Ctrl + Shift + Tab:** Próxima / aba anterior
 - **Ctrl + R:** Recarrega a aba ativa
 - **Ctrl + F:** Abre a barra de busca
 - **ESC:** Fecha modais e menus abertos
@@ -165,12 +170,14 @@ O aplicativo utiliza Electron com uma arquitetura modular:
 
 ### Adicionando Novas IAs
 
-Para adicionar uma nova IA, edite **somente** `assets/js/tabs.config.js`:
+Para adicionar uma IA fixa no app, edite **somente** `assets/js/tabs.config.js`:
 
 1. Adicione uma entrada ao array `TAB_CONFIGS` com `id`, `label`, `url`, `partition`, `icon` e `modes`
 2. Adicione o ícone correspondente em `assets/icons/`
 
 A barra lateral e os modos da aplicação são gerados automaticamente a partir desse arquivo.
+
+Alternativamente, use o botão **+** da sidebar para adicionar abas customizadas pela interface (persistem em `settings.json`, sem editar código).
 
 ### Contribuição
 

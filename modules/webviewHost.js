@@ -6,6 +6,11 @@ const { WebContentsView, Menu, MenuItem, session, app } = require("electron");
 const path = require("path");
 const log = require("electron-log");
 const Channels = require("./ipc-channels");
+const {
+  isAuthProviderHost,
+  isTabSiteHost: isTabSiteHostUrl,
+  normalizeConfig,
+} = require("./webviewHelpers");
 
 const SIDEBAR_WIDTH = 60;
 
@@ -39,6 +44,7 @@ let win = null;
 let tabs = new Map(); // tabId -> { view, config, retryState, recreateState, watchdog, findActive }
 let activeTabId = null;
 let overlayActive = false; // true quando um modal/find bar pediu para esconder a IA ativa
+let keepTabsActive = false; // false = descarta views em segundo plano ao trocar de aba
 
 function initializeHost(mainWindow) {
   win = mainWindow;
@@ -73,10 +79,6 @@ function sendToRenderer(channel, ...args) {
 }
 
 // --- Sessão por IA ---
-function getSessionFor(partition) {
-  return session.fromPartition(partition);
-}
-
 function configureSessionPermissions(ses, tabId) {
   ses.setPermissionRequestHandler((_webContents, permission, callback) => {
     const allowed = ALLOWED_IA_PERMISSIONS.has(permission);
@@ -103,37 +105,12 @@ function configureSessionPermissions(ses, tabId) {
 // aba). Criar a janela manualmente (deny + new BrowserWindow) quebrava o opener,
 // deixando a pop-up numa tela preta sem callback.
 const POPUP_DEFAULTS = { width: 520, height: 640 };
-const AUTH_PROVIDER_ROOTS = [
-  "google.com",
-  "github.com",
-  "apple.com",
-  "facebook.com",
-  "microsoftonline.com",
-  "live.com",
-];
-
-function getRootHost(hostname) {
-  const parts = String(hostname || "")
-    .toLowerCase()
-    .replace(/^www\./, "")
-    .split(".");
-  return parts.slice(-2).join(".");
-}
-
-function isAuthProviderHost(hostname) {
-  return AUTH_PROVIDER_ROOTS.includes(getRootHost(hostname));
-}
 
 function isTabSiteHost(hostname, tab) {
-  try {
-    const base = getRootHost(new URL(tab.config.url).hostname);
-    return getRootHost(hostname) === base;
-  } catch (_e) {
-    return false;
-  }
+  return isTabSiteHostUrl(hostname, tab?.config?.url);
 }
 
-function handleWindowOpen(tab) {
+function handleWindowOpen() {
   return (details) => {
     if (!details || !details.url) return { action: "deny" };
     if (!win || win.isDestroyed()) return { action: "deny" };
@@ -160,7 +137,7 @@ function trackPopup(tab, popupWin) {
   // Pop-ups aninhados (ex: Google aberto dentro do fluxo de verificação de telefone)
   const childWc = popupWin.webContents;
   if (childWc && !childWc.isDestroyed()) {
-    childWc.setWindowOpenHandler(handleWindowOpen(tab));
+    childWc.setWindowOpenHandler(handleWindowOpen());
     childWc.on("did-create-window", (_nestedWin) => trackPopup(tab, _nestedWin));
   }
   trackPopupAuthReload(tab, popupWin);
@@ -177,7 +154,7 @@ function trackPopupAuthReload(tab, popupWin) {
   };
   const onNavigate = (url) => {
     if (handled) return;
-    let hostname = "";
+    let hostname;
     try { hostname = new URL(url).hostname; } catch (_e) { return; }
     if (isAuthProviderHost(hostname)) {
       sawAuthProvider = true;
@@ -279,21 +256,29 @@ function attachListeners(tab, wc, config) {
   // Recarregamento por atalho (Ctrl/Cmd+R): intercepta a tecla antes da página
   // para garantir o reload mesmo quando o site engole o atalho ou o acelerador
   // do menu não dispara com a WebContentsView focada.
+  // Mesma lógica para os atalhos de troca de aba (Ctrl+1..9, Ctrl+Tab).
   wc.on("before-input-event", (event, input) => {
-    if (
-      input.type === "keyDown" &&
-      input.key.toLowerCase() === "r" &&
-      (input.control || input.meta) &&
-      !input.alt
-    ) {
+    if (input.type !== "keyDown" || input.alt) return;
+    const mod = input.control || input.meta;
+    if (mod && !input.shift && input.key.toLowerCase() === "r") {
       event.preventDefault();
       try { wc.reloadIgnoringCache(); } catch (_e) { wc.reload(); }
+      return;
+    }
+    if (mod && !input.shift && /^[1-9]$/.test(input.key)) {
+      event.preventDefault();
+      sendToRenderer(Channels.CMD_ACTIVATE_TAB_N, parseInt(input.key, 10));
+      return;
+    }
+    if (mod && input.key === "Tab") {
+      event.preventDefault();
+      sendToRenderer(Channels.CMD_CYCLE_TAB, !input.shift);
     }
   });
 
   // Pop-ups de login: cria via action:"allow" (preserva opener e sessão da aba)
   // e rastreia a janela criada para tratar auth-reload e limpeza.
-  wc.setWindowOpenHandler(handleWindowOpen(tab));
+  wc.setWindowOpenHandler(handleWindowOpen());
   wc.on("did-create-window", (childWin) => trackPopup(tab, childWin));
 
   wc.on("did-start-loading", () => {
@@ -367,6 +352,9 @@ function attachListeners(tab, wc, config) {
     const matches = result?.matches ?? 0;
     sendToRenderer(Channels.TAB_FOUND, tabId, active, matches);
   });
+  wc.on("page-title-updated", (_e, title) => {
+    sendToRenderer(Channels.TAB_TITLE_UPDATED, tabId, title);
+  });
 }
 
 // --- View factory ---
@@ -417,10 +405,14 @@ function showTab(payload) {
     tab.view.webContents.loadURL(config.url);
   }
 
-  // Esconde as outras abas
-  for (const [id, t] of tabs) {
-    if (id !== config.id) {
-      t.view.setVisible(false);
+  // Esconde (keepTabsActive) ou descarta as outras abas
+  for (const id of Array.from(tabs.keys())) {
+    if (id === config.id) continue;
+    if (keepTabsActive) {
+      const other = tabs.get(id);
+      if (other) other.view.setVisible(false);
+    } else {
+      destroyTab(id);
     }
   }
   activeTabId = config.id;
@@ -430,19 +422,14 @@ function showTab(payload) {
   win.contentView.addChildView(tab.view);
 }
 
-function normalizeConfig(payload) {
-  if (!payload || !payload.id || !payload.url) {
-    throw new Error("webviewHost.showTab: payload inválido (id e url são obrigatórios).");
+// Aplica a estratégia de memória: quando desativado, descarta as views
+// que não estão em foco (recarrega do zero ao voltar).
+function setKeepTabsActive(active) {
+  keepTabsActive = !!active;
+  if (keepTabsActive) return;
+  for (const id of Array.from(tabs.keys())) {
+    if (id !== activeTabId) destroyTab(id);
   }
-  const config = {
-    id: payload.id,
-    url: payload.url,
-    label: payload.label || payload.id,
-    partition: payload.partition || `persist:${payload.id}`,
-  };
-  if (payload.preload) config.preload = payload.preload;
-  if (payload.userAgent) config.userAgent = payload.userAgent;
-  return config;
 }
 
 function reloadTab(payload) {
@@ -576,4 +563,5 @@ module.exports = {
   findClose,
   clearTabCache,
   clearAllPartitions,
+  setKeepTabsActive,
 };

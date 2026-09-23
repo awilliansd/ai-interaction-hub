@@ -1,6 +1,5 @@
 // main.js
 const { app, session, ipcMain } = require("electron");
-const log = require("electron-log");
 
 // Importa os módulos
 const windowManager = require("./modules/windowManager");
@@ -58,6 +57,7 @@ if (!gotTheLock) {
 
     // Inicializa o host de WebContentsView (E1)
     webviewHost.initializeHost(mainWindow);
+    webviewHost.setKeepTabsActive(initialSettings.keepTabsActive);
 
     // Registra canais do host
     ipcMain.on(Channels.HOST_SHOW_TAB, (_e, payload) => webviewHost.showTab(payload));

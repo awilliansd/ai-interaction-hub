@@ -2,7 +2,6 @@
 // Centraliza os nomes dos canais IPC para evitar strings mágicas espalhadas.
 module.exports = {
   // Eventos unidirecionais (ipcMain.on / ipcRenderer.send)
-  RELOAD_TAB: "reload-tab",
   SET_WINDOW_TITLE: "set-window-title",
   EXIT_APP: "exit-app",
   OPEN_GITHUB: "open-github",
@@ -16,9 +15,9 @@ module.exports = {
   GET_APP_VERSION: "get-app-version",
   GET_SETTINGS: "get-settings",
   SAVE_SETTINGS: "save-settings",
-  GET_GROK_USER_AGENT: "get-grok-user-agent",
-  SHOW_WEBVIEW_CONTEXT_MENU: "show-webview-context-menu",
   SHOW_TAB_CONTEXT_MENU: "show-tab-context-menu",
+  PICK_TAB_ICON: "pick-tab-icon",
+  CLEAR_PARTITION: "clear-partition",
 
   // Comandos enviados do menu do processo principal para o renderer
   COMMAND_PREFIX: "command:",
@@ -30,6 +29,14 @@ module.exports = {
   CMD_SET_APP_MODE_DEVELOPER: "command:set-app-mode-developer",
   CMD_SHOW_ABOUT: "command:show-about",
   CMD_EXIT_APP: "command:exit-app",
+  CMD_CLEAR_APP_CACHE: "command:clear-app-cache",
+  CMD_ACTIVATE_TAB_N: "command:activate-tab-n",
+  CMD_CYCLE_TAB: "command:cycle-tab",
+  CMD_EDIT_CUSTOM_TAB: "command:edit-custom-tab",
+  CMD_REMOVE_CUSTOM_TAB: "command:remove-custom-tab",
+  CMD_ADD_ACCOUNT: "command:add-account",
+  CMD_RENAME_ACCOUNT: "command:rename-account",
+  CMD_REMOVE_ACCOUNT: "command:remove-account",
 
   // Host de WebContentsView (Etapa E1) — renderer -> main
   HOST_SHOW_TAB: "host:show-tab",
@@ -48,4 +55,5 @@ module.exports = {
   TAB_RECOVERY_TOAST: "tab:recovery-toast",
   TAB_FOUND: "tab:found",
   TAB_READY: "tab:ready",
+  TAB_TITLE_UPDATED: "tab:title-updated",
 };

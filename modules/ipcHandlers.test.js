@@ -29,7 +29,8 @@ jest.mock('./appLifecycle', () => ({
 
 jest.mock('./webviewHost', () => ({
   clearAllPartitions: jest.fn(),
-  destroyAllTabs: jest.fn()
+  destroyAllTabs: jest.fn(),
+  setKeepTabsActive: jest.fn()
 }));
 
 describe('ipcHandlers', () => {
@@ -74,12 +75,10 @@ describe('ipcHandlers', () => {
       ipcHandlers.initializeIpcHandlers(mockMainWindow, mockApp, mockSettingsManager);
 
       // Verifica se os handlers foram registrados
-      expect(ipcMain.on).toHaveBeenCalledWith('reload-tab', expect.any(Function));
       expect(ipcMain.on).toHaveBeenCalledWith('exit-app', expect.any(Function));
       expect(ipcMain.on).toHaveBeenCalledWith('open-github', expect.any(Function));
       expect(ipcMain.on).toHaveBeenCalledWith('set-minimize-to-tray', expect.any(Function));
       expect(ipcMain.on).toHaveBeenCalledWith('set-keep-tabs-active', expect.any(Function));
-      expect(ipcMain.on).toHaveBeenCalledWith('app:close', expect.any(Function));
       expect(ipcMain.on).toHaveBeenCalledWith('clear-app-cache', expect.any(Function));
       
       expect(ipcMain.handle).toHaveBeenCalledWith('get-app-version', expect.any(Function));
@@ -90,20 +89,6 @@ describe('ipcHandlers', () => {
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('get-app-version');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('get-settings');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('save-settings');
-    });
-
-    it('deve registrar o handler para reload-tab e enviar mensagem para a janela', () => {
-      ipcHandlers.initializeIpcHandlers(mockMainWindow, mockApp, mockSettingsManager);
-
-      // Encontra o handler registrado para 'reload-tab'
-      const reloadTabHandler = ipcMain.on.mock.calls.find(call => call[0] === 'reload-tab')[1];
-      
-      // Executa o handler com um tabId de exemplo
-      const tabId = 'tab-1';
-      reloadTabHandler({}, tabId);
-      
-      // Verifica se a mensagem foi enviada para a janela
-      expect(mockMainWindow.webContents.send).toHaveBeenCalledWith('reload-tab', tabId);
     });
 
     it('deve registrar o handler para exit-app e chamar app.quit()', () => {
@@ -170,21 +155,8 @@ describe('ipcHandlers', () => {
       expect(mockSettingsManager.loadSettings).toHaveBeenCalled();
       expect(settings.keepTabsActive).toBe(newValue);
       expect(mockSettingsManager.saveSettings).toHaveBeenCalledWith(settings);
-    });
-
-    it('deve registrar o handler para app:close e chamar app.quit()', () => {
-      ipcHandlers.initializeIpcHandlers(mockMainWindow, mockApp, mockSettingsManager);
-
-      // Encontra o handler registrado para 'app:close'
-      const appCloseHandler = ipcMain.on.mock.calls.find(call => call[0] === 'app:close')[1];
-      
-      // Executa o handler
-      appCloseHandler();
-      
-      // Verifica se app.quit() foi chamado
-      expect(mockApp.quit).toHaveBeenCalled();
-      // Verifica se setIsQuiting foi chamado com true
-      expect(require('./appLifecycle').setIsQuiting).toHaveBeenCalledWith(true);
+      // E que o host foi avisado para reaplicar a estratégia de memória
+      expect(require('./webviewHost').setKeepTabsActive).toHaveBeenCalledWith(newValue);
     });
 
     it('deve registrar o handler para get-app-version e retornar a versão correta', () => {
@@ -270,35 +242,12 @@ describe('ipcHandlers', () => {
       expect(mockMainWindow.reload).toHaveBeenCalled();
     });
 
-    it('deve mostrar um aviso se mainWindow não estiver definida no handler reload-tab', () => {
-      // Simula que mainWindow não está definida
-      require('./windowManager').getMainWindow.mockReturnValueOnce(null);
-      
-      ipcHandlers.initializeIpcHandlers(mockMainWindow, mockApp, mockSettingsManager);
-
-      // Encontra o handler registrado para 'reload-tab'
-      const reloadTabHandler = ipcMain.on.mock.calls.find(call => call[0] === 'reload-tab')[1];
-      
-      // Espiona console.warn
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-      
-      // Executa o handler
-      reloadTabHandler({}, 'tab-1');
-      
-      // Verifica se o aviso foi mostrado
-      expect(consoleWarnSpy).toHaveBeenCalledWith('IPC reload-tab: Janela principal não encontrada.');
-      
-      // Restaura console.warn
-      consoleWarnSpy.mockRestore();
-    });
-
     it('deve registrar handlers mesmo se mainWindow não for fornecida', () => {
       expect(() => {
         ipcHandlers.initializeIpcHandlers(null, mockApp, mockSettingsManager);
       }).not.toThrow();
       
       // Verifica se os handlers ainda foram registrados
-      expect(ipcMain.on).toHaveBeenCalledWith('reload-tab', expect.any(Function));
       expect(ipcMain.on).toHaveBeenCalledWith('exit-app', expect.any(Function));
       expect(ipcMain.on).toHaveBeenCalledWith('open-github', expect.any(Function));
     });
