@@ -107,7 +107,7 @@ function configureSessionPermissions(ses, tabId) {
 const POPUP_DEFAULTS = { width: 520, height: 640 };
 
 function isTabSiteHost(hostname, tab) {
-  return isTabSiteHostUrl(hostname, tab?.config?.url);
+  return isTabSiteHostUrl(hostname, tab?.config?.url, tab?.config?.id);
 }
 
 function handleWindowOpen() {

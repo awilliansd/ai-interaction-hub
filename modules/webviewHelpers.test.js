@@ -48,6 +48,11 @@ describe('webviewHelpers', () => {
       expect(isTabSiteHost('www.deepseek.com', 'https://chat.deepseek.com')).toBe(true);
     });
 
+    it('deve reconhecer os domínios kimi.ai e kimi.com para a aba Kimi', () => {
+      expect(isTabSiteHost('www.kimi.ai', 'https://www.kimi.ai/', 'kimi')).toBe(true);
+      expect(isTabSiteHost('kimi.com', 'https://www.kimi.ai/', 'kimi')).toBe(true);
+    });
+
     it('deve retornar false para hosts de outro domínio', () => {
       expect(isTabSiteHost('google.com', 'https://chat.deepseek.com')).toBe(false);
     });

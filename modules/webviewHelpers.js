@@ -11,6 +11,10 @@ const AUTH_PROVIDER_ROOTS = [
   "live.com",
 ];
 
+const TAB_SITE_HOST_ALIASES = {
+  kimi: ["kimi.ai", "kimi.com"],
+};
+
 function getRootHost(hostname) {
   const parts = String(hostname || "")
     .toLowerCase()
@@ -23,10 +27,12 @@ function isAuthProviderHost(hostname) {
   return AUTH_PROVIDER_ROOTS.includes(getRootHost(hostname));
 }
 
-function isTabSiteHost(hostname, tabUrl) {
+function isTabSiteHost(hostname, tabUrl, tabId) {
   try {
+    const hostRoot = getRootHost(hostname);
+    if (TAB_SITE_HOST_ALIASES[tabId]?.includes(hostRoot)) return true;
     const base = getRootHost(new URL(tabUrl).hostname);
-    return getRootHost(hostname) === base;
+    return hostRoot === base;
   } catch (_e) {
     return false;
   }
@@ -49,6 +55,7 @@ function normalizeConfig(payload) {
 
 module.exports = {
   AUTH_PROVIDER_ROOTS,
+  TAB_SITE_HOST_ALIASES,
   getRootHost,
   isAuthProviderHost,
   isTabSiteHost,
