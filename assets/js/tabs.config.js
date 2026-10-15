@@ -14,6 +14,7 @@ export const TAB_CONFIGS = [
   { id: "gemini", label: "Gemini", url: "https://gemini.google.com/app", partition: "persist:gemini", icon: "assets/icons/gemini.png", modes: [APP_MODES.PERSONAL] },
   { id: "claude", label: "Claude", url: "https://claude.ai", partition: "persist:claude", icon: "assets/icons/claude.png", modes: [APP_MODES.PERSONAL, APP_MODES.DEVELOPER] },
   { id: "deepseek", label: "DeepSeek", url: "https://chat.deepseek.com", partition: "persist:deepseek", icon: "assets/icons/deepseek.png", modes: [APP_MODES.PERSONAL], userAgent: "clean-chrome" },
+  { id: "mimo", label: "Xiaomi MiMo", url: "https://aistudio.xiaomimimo.com/#/c", partition: "persist:mimo", icon: "assets/icons/mimo.png", modes: [APP_MODES.PERSONAL] },
   { id: "manus", label: "Manus", url: "https://manus.im/app", partition: "persist:manus", icon: "assets/icons/manus.png", modes: [APP_MODES.DEVELOPER] },
   { id: "grok", label: "Grok", url: "https://grok.com", partition: "persist:grok", icon: "assets/icons/grok.png", modes: [APP_MODES.PERSONAL] },
   { id: "kimi", label: "Kimi", url: "https://www.kimi.ai/", partition: "persist:kimi", icon: "assets/icons/kimi.png", modes: [APP_MODES.PERSONAL] },
@@ -21,9 +22,9 @@ export const TAB_CONFIGS = [
   { id: "zai", label: "Z.ai", url: "https://chat.z.ai/", partition: "persist:zai", icon: "assets/icons/zai.svg", modes: [APP_MODES.DEVELOPER] },
   { id: "replit", label: "Replit", url: "https://replit.com/", partition: "persist:replit", icon: "assets/icons/replit.ico", modes: [APP_MODES.DEVELOPER] },
   { id: "groq", label: "Groq", url: "https://console.groq.com/playground", partition: "persist:groq", icon: "assets/icons/groq.ico", modes: [APP_MODES.DEVELOPER] },
-  { id: "copilot", label: "MS Copilot", url: "https://copilot.microsoft.com", partition: "persist:copilot", icon: "assets/icons/mscopilot.png", modes: [APP_MODES.PERSONAL] },
+  { id: "copilot", label: "MS Copilot", url: "https://copilot.microsoft.com", partition: "persist:copilot", icon: "assets/icons/mscopilot.png", modes: [APP_MODES.DEVELOPER] },
   { id: "metaai", label: "Meta AI", url: "https://www.meta.ai", partition: "persist:metaai", icon: "assets/icons/metaai.png", modes: [APP_MODES.PERSONAL] },
-  { id: "perplexity", label: "Perplexity", url: "https://www.perplexity.ai", partition: "persist:perplexity", icon: "assets/icons/perplexity.png", modes: [APP_MODES.PERSONAL] },
+  { id: "perplexity", label: "Perplexity", url: "https://www.perplexity.ai", partition: "persist:perplexity", icon: "assets/icons/perplexity.png", modes: [APP_MODES.DEVELOPER] },
 ];
 
 export const TAB_BY_ID = Object.fromEntries(TAB_CONFIGS.map((t) => [t.id, t]));

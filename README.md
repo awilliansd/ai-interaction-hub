@@ -13,15 +13,16 @@
   - ChatGPT
   - Claude
   - DeepSeek
+  - Xiaomi MiMo
   - Grok
   - Manus
   - Kimi
   - Qwen Chat
   - Z.ai
-  - Microsoft Copilot
   - Meta AI
+  - Microsoft Copilot
   - Perplexity
-  - Replit (modo desenvolvedor)
+  - Replit
 
 - **Modos de uso:**
   - Modo Pessoal (abas focadas em IAs gerais)
@@ -42,7 +43,7 @@
 
 ## Pré-requisitos
 
-- Node.js **versão 22 LTS ou superior** (definido em `.nvmrc`/`.node-version` e em `engines`)
+- Node.js **versão 24 LTS ou superior** (definido em `.nvmrc`/`.node-version` e em `engines`)
 - npm (versão 10 ou superior)
 
 ## Instalação
