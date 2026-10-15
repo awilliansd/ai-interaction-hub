@@ -4,7 +4,7 @@ Indicações específicas deste repositório para agentes de IA (e humanos) que 
 
 ## Ambiente
 
-- **Node.js 22 LTS** é obrigatório (definido em `.nvmrc`/`.node-version` e em `package.json` `engines`).
+- **Node.js 24 LTS** é obrigatório (definido em `.nvmrc`/`.node-version` e em `package.json` `engines`).
   `.npmrc` tem `engine-strict=true`, então `npm install` recusa Node incompatível.
 - **npm 10+** (necessário para o bloqueio de install scripts).
 

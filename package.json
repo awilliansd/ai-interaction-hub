@@ -1,12 +1,12 @@
 {
   "name": "ai-interaction-hub",
-  "version": "2.3.2",
+  "version": "2.4.0",
   "description": "Hub unificado para múltiplos chats de IA",
   "author": "Alessandro Willian",
   "license": "MIT",
   "main": "main.js",
   "engines": {
-    "node": ">=22",
+    "node": ">=24",
     "npm": ">=10"
   },
   "scripts": {
@@ -84,6 +84,8 @@
   },
   "allowScripts": {
     "electron@43.2.0": true,
-    "sharp@0.35.3": true
+    "sharp@0.35.3": true,
+    "unrs-resolver@1.12.2": true,
+    "electron-winstaller@5.4.0": true
   }
 }
